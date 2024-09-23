@@ -4,14 +4,14 @@
     "deploy": "wrangler deploy --minify src/index.ts"
   },
   "dependencies": {
-    "@sapphire/utilities": "^3.16.2",
+    "@sapphire/utilities": "^3.17.0",
     "destr": "^2.0.3",
-    "hono": "^4.4.3",
+    "hono": "^4.6.2",
     "html-entities": "^2.5.2"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20240529.0",
-    "@types/node": "^20.14.0",
-    "wrangler": "^3.58.0"
+    "@cloudflare/workers-types": "^4.20240919.0",
+    "@types/node": "^20.16.5",
+    "wrangler": "^3.78.7"
   }
 }
