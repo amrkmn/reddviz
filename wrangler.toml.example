@@ -2,6 +2,10 @@ name = "reddviz"
 compatibility_date = "2023-12-01"
 compatibility_flags = ["nodejs_compat"]
 
+[vars]
+REDDIT_CLIENT_ID = ""
+REDDIT_CLIENT_SECRET = ""
+
 [[kv_namespaces]]
 binding = "REDDVIZ_KV"
 id = ""
