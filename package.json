@@ -6,12 +6,19 @@
   "dependencies": {
     "@sapphire/utilities": "^3.18.1",
     "destr": "^2.0.3",
-    "hono": "^4.6.9",
+    "hono": "^4.6.14",
     "html-entities": "^2.5.2"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20241106.0",
+    "@cloudflare/workers-types": "^4.20241218.0",
     "@types/node": "^20.17.6",
-    "wrangler": "^3.86.1"
-  }
+    "wrangler": "^3.99.0"
+  },
+  "name": "reddviz",
+  "version": "1.0.0",
+  "description": "```\r bun install\r bun run dev\r ```",
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }
