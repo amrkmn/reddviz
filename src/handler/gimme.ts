@@ -1,6 +1,6 @@
 import { isNullish, isNullishOrEmpty } from "@sapphire/utilities";
 import destr from "destr";
-import { Hono } from "hono";
+import { Context, Hono } from "hono";
 import { randomInt } from "node:crypto";
 import { getPosts } from "../reddit";
 import { Bindings, Post } from "../types";
@@ -10,70 +10,129 @@ import { getNPosts, onlyImagePosts } from "../utils/functions";
 
 const gimme = new Hono<{ Bindings: Bindings }>();
 
+/**
+ * Get random posts from a subreddit
+ * @route GET /:subreddit?
+ * @param {string} subreddit - Optional subreddit name
+ * @query {number} c | count - Number of posts to return
+ * @query {boolean} nonsfw - Filter out NSFW content
+ */
 gimme.get("/:subreddit?", async (c) => {
     const kv = c.get("kv");
-    let param = c.req.param();
-    let query = c.req.query();
+    const param = c.req.param();
+    const query = c.req.query();
 
-    let subreddit = isNullish(param.subreddit) ? SUBREDDITS[randomInt(SUBREDDITS.length)] : param.subreddit.toLowerCase();
-    let count = Number(query.c || query.count);
-    let nonsfw = Reflect.has(query, "nonsfw");
+    // Handle subreddit parameter
+    const subreddit = isNullish(param.subreddit) ? SUBREDDITS[randomInt(SUBREDDITS.length)] : param.subreddit.toLowerCase();
 
-    if (!isNullish(query.c) || !isNullish(query.count)) {
-        if (isNaN(count) || count <= 0)
-            return c.json({ code: StatusCode.BadRequest, message: "invalid count value" }, StatusCode.BadRequest);
-        if (count > 50) count = 50;
+    // Parse query parameters
+    const count = parseCountParam(query.c || query.count);
+    const nonsfw = Reflect.has(query, "nonsfw");
+
+    // Validate count
+    if (count !== null && count <= 0) {
+        return c.json({ code: StatusCode.BadRequest, message: "invalid count value" }, StatusCode.BadRequest);
     }
 
     try {
-        let cached = await kv.get(`${SUB_PREFIX_KEY}${subreddit}`);
-        let posts = isNullish(cached) ? null : destr<Post[]>(cached);
+        // Get posts from cache or fetch from Reddit
+        const posts = await getPostsData(c, kv, subreddit);
 
         if (isNullishOrEmpty(posts)) {
-            let { posts: freshPosts, response } = await getPosts(c, subreddit, 100);
-
-            if (isNullishOrEmpty(freshPosts)) {
-                c.status(response.code);
-                return c.json(response);
-            }
-
-            freshPosts = onlyImagePosts(freshPosts);
-            await kv.put(`${SUB_PREFIX_KEY}${subreddit}`, JSON.stringify(freshPosts), { expirationTtl: SUB_EXPIRE });
-            posts = freshPosts;
-        }
-        posts = nonsfw ? posts.filter((x) => !x.nsfw) : posts;
-
-        if (nonsfw && isNullishOrEmpty(posts) && posts.every((x) => x.nsfw)) {
-            c.status(StatusCode.NotFound);
-            return c.json({
-                code: StatusCode.NotFound,
-                message: `r/${subreddit} only has nsfw posts`,
-            });
-        }
-        if (isNullishOrEmpty(posts)) {
-            c.status(StatusCode.NotFound);
-            return c.json({
-                code: StatusCode.NotFound,
-                message: isNullish(param.subreddit) ? "error while getting posts" : `r/${subreddit} has no posts with images`,
-            });
+            return handleEmptyPosts(c, subreddit, param.subreddit);
         }
 
-        if (!isNaN(count)) {
-            if (posts.length < count) count = posts.length;
-            posts = getNPosts(posts, count);
-            c.status(StatusCode.Ok);
-            return c.json({ count, posts });
+        // Filter NSFW content if requested
+        const filteredPosts = nonsfw ? posts.filter((x) => !x.nsfw) : posts;
+
+        if (nonsfw && isNullishOrEmpty(filteredPosts)) {
+            return c.json(
+                {
+                    code: StatusCode.NotFound,
+                    message: `r/${subreddit} only has nsfw posts`,
+                },
+                StatusCode.NotFound
+            );
         }
 
-        let post = posts[randomInt(posts.length)];
+        if (isNullishOrEmpty(filteredPosts)) {
+            return handleEmptyPosts(c, subreddit, param.subreddit);
+        }
 
-        c.status(StatusCode.Ok);
-        return c.json(post);
+        // Return multiple posts if count is specified
+        if (count !== null) {
+            const actualCount = Math.min(count, filteredPosts.length);
+            const selectedPosts = getNPosts(filteredPosts, actualCount);
+
+            return c.json({ count: actualCount, posts: selectedPosts }, StatusCode.Ok);
+        }
+
+        // Return a single random post
+        const post = filteredPosts[randomInt(filteredPosts.length)];
+        return c.json(post, StatusCode.Ok);
     } catch (error: any) {
-        c.status(error.code ?? StatusCode.ServiceUnavailable);
-        return c.json({ code: error.code ?? StatusCode.ServiceUnavailable, message: error.message });
+        const statusCode = error.code ?? StatusCode.ServiceUnavailable;
+        return c.json({ code: statusCode, message: error.message }, statusCode);
     }
 });
 
-export { gimme };
+/**
+ * Parse and validate count parameter
+ * @param countParam - The count parameter from the query
+ * @returns Validated count number or null if not specified
+ */
+function parseCountParam(countParam: string | undefined): number | null {
+    if (isNullish(countParam)) return null;
 
+    const parsedCount = Number(countParam);
+    if (isNaN(parsedCount)) return null;
+
+    return Math.min(parsedCount, 50);
+}
+
+/**
+ * Get posts data from cache or fetch from Reddit
+ * @param c - Hono context
+ * @param kv - KV store
+ * @param subreddit - Subreddit name
+ * @returns Array of posts
+ */
+async function getPostsData(c: Context<{ Bindings: Bindings }>, kv: any, subreddit: string): Promise<Post[]> {
+    const cached = await kv.get(`${SUB_PREFIX_KEY}${subreddit}`);
+    const posts = isNullish(cached) ? null : destr<Post[]>(cached);
+
+    if (!isNullishOrEmpty(posts)) {
+        return posts;
+    }
+
+    const { posts: freshPosts, response } = await getPosts(c, subreddit, 100);
+
+    if (isNullishOrEmpty(freshPosts)) {
+        c.status(response.code);
+        throw { code: response.code, message: response.message };
+    }
+
+    const imagePosts = onlyImagePosts(freshPosts);
+    await kv.put(`${SUB_PREFIX_KEY}${subreddit}`, JSON.stringify(imagePosts), { expirationTtl: SUB_EXPIRE });
+
+    return imagePosts;
+}
+
+/**
+ * Handle empty posts response
+ * @param c - Hono context
+ * @param subreddit - Subreddit name
+ * @param paramSubreddit - Original subreddit parameter
+ * @returns JSON response
+ */
+function handleEmptyPosts(c: Context<{ Bindings: Bindings }>, subreddit: string, paramSubreddit: string | undefined) {
+    return c.json(
+        {
+            code: StatusCode.NotFound,
+            message: isNullish(paramSubreddit) ? "error while getting posts" : `r/${subreddit} has no posts with images`,
+        },
+        StatusCode.NotFound
+    );
+}
+
+export { gimme };
