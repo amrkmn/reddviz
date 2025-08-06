@@ -1,24 +1,24 @@
 {
-  "scripts": {
-    "dev": "wrangler dev src/index.ts",
-    "deploy": "wrangler deploy --minify src/index.ts"
-  },
-  "dependencies": {
-    "@sapphire/utilities": "^3.18.2",
-    "destr": "^2.0.5",
-    "hono": "^4.8.12",
-    "html-entities": "^2.6.0"
-  },
-  "devDependencies": {
-    "@cloudflare/workers-types": "^4.20250806.0",
-    "@types/node": "^20.19.9",
-    "wrangler": "^4.28.0"
-  },
-  "name": "reddviz",
-  "version": "1.0.0",
-  "description": "```\r bun install\r bun run dev\r ```",
-  "main": "index.js",
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+    "name": "reddviz",
+    "version": "1.0.0",
+    "description": "```\r bun install\r bun run dev\r ```",
+    "main": "index.js",
+    "keywords": [],
+    "author": "",
+    "license": "MIT",
+    "scripts": {
+        "dev": "wrangler dev src/index.ts",
+        "deploy": "wrangler deploy --minify src/index.ts"
+    },
+    "dependencies": {
+        "@sapphire/utilities": "^3.18.2",
+        "destr": "^2.0.5",
+        "hono": "^4.8.12",
+        "html-entities": "^2.6.0"
+    },
+    "devDependencies": {
+        "@cloudflare/workers-types": "^4.20250806.0",
+        "@types/node": "^20.19.9",
+        "wrangler": "^4.28.0"
+    }
 }
