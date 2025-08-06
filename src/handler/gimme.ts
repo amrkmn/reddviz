@@ -2,9 +2,9 @@ import { isNullish, isNullishOrEmpty } from "@sapphire/utilities";
 import destr from "destr";
 import { Context, Hono } from "hono";
 import { randomInt } from "node:crypto";
+import { error } from "../middleware/error";
 import { getPosts } from "../reddit";
 import { Bindings, Post } from "../types";
-import { StatusCode } from "../types/status-code";
 import { SUBREDDITS, SUB_EXPIRE, SUB_PREFIX_KEY } from "../utils/constants";
 import { getNPosts, onlyImagePosts } from "../utils/functions";
 
@@ -31,49 +31,38 @@ gimme.get("/:subreddit?", async (c) => {
 
     // Validate count
     if (count !== null && count <= 0) {
-        return c.json({ code: StatusCode.BadRequest, message: "invalid count value" }, StatusCode.BadRequest);
+        throw error.BadRequest("invalid count value");
     }
 
-    try {
-        // Get posts from cache or fetch from Reddit
-        const posts = await getPostsData(c, kv, subreddit);
+    // Get posts from cache or fetch from Reddit
+    const posts = await getPostsData(c, kv, subreddit);
 
-        if (isNullishOrEmpty(posts)) {
-            return handleEmptyPosts(c, subreddit, param.subreddit);
-        }
-
-        // Filter NSFW content if requested
-        const filteredPosts = nonsfw ? posts.filter((x) => !x.nsfw) : posts;
-
-        if (nonsfw && isNullishOrEmpty(filteredPosts)) {
-            return c.json(
-                {
-                    code: StatusCode.NotFound,
-                    message: `r/${subreddit} only has nsfw posts`,
-                },
-                StatusCode.NotFound
-            );
-        }
-
-        if (isNullishOrEmpty(filteredPosts)) {
-            return handleEmptyPosts(c, subreddit, param.subreddit);
-        }
-
-        // Return multiple posts if count is specified
-        if (count !== null) {
-            const actualCount = Math.min(count, filteredPosts.length);
-            const selectedPosts = getNPosts(filteredPosts, actualCount);
-
-            return c.json({ count: actualCount, posts: selectedPosts }, StatusCode.Ok);
-        }
-
-        // Return a single random post
-        const post = filteredPosts[randomInt(filteredPosts.length)];
-        return c.json(post, StatusCode.Ok);
-    } catch (error: any) {
-        const statusCode = error.code ?? StatusCode.ServiceUnavailable;
-        return c.json({ code: statusCode, message: error.message }, statusCode);
+    if (isNullishOrEmpty(posts)) {
+        return handleEmptyPosts(c, subreddit, param.subreddit);
     }
+
+    // Filter NSFW content if requested
+    const filteredPosts = nonsfw ? posts.filter((x) => !x.nsfw) : posts;
+
+    if (nonsfw && isNullishOrEmpty(filteredPosts)) {
+        throw error.NotFound(`r/${subreddit} only has nsfw posts`);
+    }
+
+    if (isNullishOrEmpty(filteredPosts)) {
+        return handleEmptyPosts(c, subreddit, param.subreddit);
+    }
+
+    // Return multiple posts if count is specified
+    if (count !== null) {
+        const actualCount = Math.min(count, filteredPosts.length);
+        const selectedPosts = getNPosts(filteredPosts, actualCount);
+
+        return c.json({ count: actualCount, posts: selectedPosts });
+    }
+
+    // Return a single random post
+    const post = filteredPosts[randomInt(filteredPosts.length)];
+    return c.json(post);
 });
 
 /**
@@ -109,7 +98,7 @@ async function getPostsData(c: Context<{ Bindings: Bindings }>, kv: any, subredd
 
     if (isNullishOrEmpty(freshPosts)) {
         c.status(response.code);
-        throw { code: response.code, message: response.message };
+        throw error.InternalServerError(response.message);
     }
 
     const imagePosts = onlyImagePosts(freshPosts);
@@ -126,13 +115,7 @@ async function getPostsData(c: Context<{ Bindings: Bindings }>, kv: any, subredd
  * @returns JSON response
  */
 function handleEmptyPosts(c: Context<{ Bindings: Bindings }>, subreddit: string, paramSubreddit: string | undefined) {
-    return c.json(
-        {
-            code: StatusCode.NotFound,
-            message: isNullish(paramSubreddit) ? "error while getting posts" : `r/${subreddit} has no posts with images`,
-        },
-        StatusCode.NotFound
-    );
+    throw error.NotFound(isNullish(paramSubreddit) ? "error while getting posts" : `r/${subreddit} has no posts with images`);
 }
 
 export { gimme };
