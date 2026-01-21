@@ -109,7 +109,6 @@ async function getPostsData(c: Context<{ Bindings: Bindings }>, kv: KVNamespace,
 
 /**
  * Handle empty posts response
- * @param c - Hono context
  * @param subreddit - Subreddit name
  * @param paramSubreddit - Original subreddit parameter
  * @returns JSON response
