@@ -24,84 +24,78 @@ export async function getPosts(c: Context<{ Bindings: Bindings }>, subreddit: st
         statusCode = req.statusCode;
     }
 
-    if (statusCode === StatusCode.InternalServerError)
-        return {
-            posts: null,
-            response: {
-                code: StatusCode.ServiceUnavailable,
-                message: "reddit is unreachable at the moment",
-            },
-        };
-
-    if (statusCode === StatusCode.Forbidden)
-        return {
-            posts: null,
-            response: {
-                code: StatusCode.Forbidden,
-                message: "unable to access subreddit. subreddit is locked or private",
-            },
-        };
-
-    if (statusCode === StatusCode.NotFound)
-        return {
-            posts: null,
-            response: {
-                code: StatusCode.NotFound,
-                message: "this subreddit does not exist.",
-            },
-        };
-
-    if (statusCode !== StatusCode.Ok)
-        return {
-            posts: null,
-            response: {
-                code: StatusCode.InternalServerError,
-                message: "unknown error while getting posts. please try again",
-            },
-        };
-
-    if (body === null)
-        return {
-            posts: null,
-            response: {
-                code: StatusCode.InternalServerError,
-                message: "error while getting posts from subreddit. please try again",
-            },
-        };
-
-    if (Array.isArray(body.data.children) && isNullishOrEmpty(body.data.children))
-        return {
-            posts: null,
-            response: {
-                code: StatusCode.NotFound,
-                message: "this subreddit has no posts or doesn't exist.",
-            },
-        };
-
-    let posts: Post[] = [];
-    for (let { data: post } of body.data.children) {
-        posts.push({
-            id: decode(post.id),
-            title: decode(post.title),
-            subreddit: decode(post.subreddit),
-            author: decode(post.author),
-            postLink: decode(new URL(`${post.permalink}`, "https://www.reddit.com").toString()),
-            thumbnail: decode(post.thumbnail),
-            image: decode(post.url),
-            nsfw: post.over_18,
-            spoiler: post.spoiler,
-            upvotes: post.ups,
-            comments: post.num_comments,
-            createdUtc: post.created_utc,
-            upvoteRatio: post.upvote_ratio,
-            preview: {
-                images: getCleanPreviewImages(post),
-                gifs: getClearPreviewGifs(post),
-            },
-        });
+    if (statusCode !== StatusCode.Ok) {
+        return handleApiError(statusCode);
     }
 
+    if (isNullish(body) || (Array.isArray(body.data.children) && isNullishOrEmpty(body.data.children))) {
+        return {
+            posts: null,
+            response: {
+                code: statusCode === StatusCode.Ok ? StatusCode.NotFound : StatusCode.InternalServerError,
+                message: isNullish(body) ? "error while getting posts from subreddit. please try again" : "this subreddit has no posts or doesn't exist.",
+            },
+        };
+    }
+
+    const posts = body.data.children.map(({ data: post }: any) => ({
+        id: decode(post.id),
+        title: decode(post.title),
+        subreddit: decode(post.subreddit),
+        author: decode(post.author),
+        postLink: decode(new URL(`${post.permalink}`, "https://www.reddit.com").toString()),
+        thumbnail: decode(post.thumbnail),
+        image: decode(post.url),
+        nsfw: post.over_18,
+        spoiler: post.spoiler,
+        upvotes: post.ups,
+        comments: post.num_comments,
+        createdUtc: post.created_utc,
+        upvoteRatio: post.upvote_ratio,
+        preview: {
+            images: getCleanPreviewImages(post),
+            gifs: getClearPreviewGifs(post),
+        },
+    }));
+
     return { posts, response: { code: StatusCode.Ok, message: "OK" } };
+}
+
+function handleApiError(statusCode: number) {
+    switch (statusCode) {
+        case StatusCode.InternalServerError:
+            return {
+                posts: null,
+                response: {
+                    code: StatusCode.ServiceUnavailable,
+                    message: "reddit is unreachable at the moment",
+                },
+            };
+        case StatusCode.Forbidden:
+            return {
+                posts: null,
+                response: {
+                    code: StatusCode.Forbidden,
+                    message: "unable to access subreddit. subreddit is locked or private",
+                },
+            };
+        case StatusCode.NotFound:
+            return {
+                posts: null,
+                response: {
+                    code: StatusCode.NotFound,
+                    message: "this subreddit does not exist.",
+                },
+            };
+        default:
+            return {
+                posts: null,
+                response: {
+                    code: StatusCode.InternalServerError,
+                    message: "unknown error while getting posts. please try again",
+                },
+            };
+    }
 }
 
 export function getApiURL(subreddit: string, limit: number): string {
@@ -110,3 +104,4 @@ export function getApiURL(subreddit: string, limit: number): string {
 
     return url.toString();
 }
+

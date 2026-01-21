@@ -86,7 +86,7 @@ function parseCountParam(countParam: string | undefined): number | null {
  * @param subreddit - Subreddit name
  * @returns Array of posts
  */
-async function getPostsData(c: Context<{ Bindings: Bindings }>, kv: any, subreddit: string): Promise<Post[]> {
+async function getPostsData(c: Context<{ Bindings: Bindings }>, kv: KVNamespace, subreddit: string): Promise<Post[]> {
     const cached = await kv.get(`${SUB_PREFIX_KEY}${subreddit}`);
     const posts = isNullish(cached) ? null : destr<Post[]>(cached);
 
@@ -119,3 +119,4 @@ function handleEmptyPosts(c: Context<{ Bindings: Bindings }>, subreddit: string,
 }
 
 export { gimme };
+
