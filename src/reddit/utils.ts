@@ -1,6 +1,7 @@
 import { Nullish, isNullish, isNullishOrEmpty } from "@sapphire/utilities";
 import { decode } from "html-entities";
 import { Reddit } from "../types";
+import { isObjectEmpty } from "../utils/functions";
 
 export function getClearPreviewGifs(post: Reddit.PostDataElement) {
     let links: string[] = [];
@@ -8,7 +9,7 @@ export function getClearPreviewGifs(post: Reddit.PostDataElement) {
 
     if (isNullish(preview)) return links;
     else if (isNullishOrEmpty(preview.images)) return links;
-    else if (isNullishOrEmpty(preview.images[0].variants)) return links;
+    else if (isObjectEmpty(preview.images[0].variants)) return links;
 
     const gif = Reflect.get(preview.images[0].variants, "gif") as Omit<Reddit.Image, "id" | "variants"> | Nullish;
 

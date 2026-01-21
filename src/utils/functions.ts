@@ -2,6 +2,10 @@ import { isNullish } from "@sapphire/utilities";
 import { extname } from "node:path";
 import { Post } from "../types";
 
+export function isObjectEmpty(obj: Record<string, any>) {
+    return Object.keys(obj).length === 0;
+}
+
 export function onlyImagePosts(posts: Post[] | null) {
     if (isNullish(posts)) return [];
 
