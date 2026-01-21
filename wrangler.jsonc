@@ -1,0 +1,13 @@
+{
+  "name": "reddviz",
+  "compatibility_date": "2023-12-01",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "REDDVIZ_KV",
+      "id": "126a8a3986ba4418949b33214769640d"
+    }
+  ]
+}
