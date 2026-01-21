@@ -38,7 +38,7 @@ gimme.get("/:subreddit?", async (c) => {
     const posts = await getPostsData(c, kv, subreddit);
 
     if (isNullishOrEmpty(posts)) {
-        return handleEmptyPosts(c, subreddit, param.subreddit);
+        return handleEmptyPosts(subreddit, param.subreddit);
     }
 
     // Filter NSFW content if requested
@@ -49,7 +49,7 @@ gimme.get("/:subreddit?", async (c) => {
     }
 
     if (isNullishOrEmpty(filteredPosts)) {
-        return handleEmptyPosts(c, subreddit, param.subreddit);
+        return handleEmptyPosts(subreddit, param.subreddit);
     }
 
     // Return multiple posts if count is specified
@@ -114,9 +114,8 @@ async function getPostsData(c: Context<{ Bindings: Bindings }>, kv: KVNamespace,
  * @param paramSubreddit - Original subreddit parameter
  * @returns JSON response
  */
-function handleEmptyPosts(c: Context<{ Bindings: Bindings }>, subreddit: string, paramSubreddit: string | undefined) {
+function handleEmptyPosts(subreddit: string, paramSubreddit: string | undefined) {
     throw error.NotFound(isNullish(paramSubreddit) ? "error while getting posts" : `r/${subreddit} has no posts with images`);
 }
 
 export { gimme };
-

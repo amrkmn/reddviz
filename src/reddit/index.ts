@@ -1,14 +1,15 @@
 import { isNullish, isNullishOrEmpty } from "@sapphire/utilities";
 import { Context } from "hono";
 import { decode } from "html-entities";
-import { Bindings, Post, StatusCode } from "../types";
+import { randomInt } from "node:crypto";
+import { Bindings, StatusCode } from "../types";
 import { ACCESS_TOKEN_KEY, TIMES } from "../utils/constants";
 import { makeRequest } from "./request";
 import { getToken } from "./token";
 import { getCleanPreviewImages, getClearPreviewGifs } from "./utils";
-import { randomInt } from "node:crypto";
 
 export async function getPosts(c: Context<{ Bindings: Bindings }>, subreddit: string, count: number) {
+
     const kv = c.get("kv");
     const url = getApiURL(subreddit, count);
 
