@@ -4,7 +4,7 @@ import { Context, Hono } from "hono";
 import { randomInt } from "node:crypto";
 import { error } from "../middleware/error";
 import { getPosts } from "../reddit";
-import { Bindings, Post } from "../types";
+import { Bindings, Post, StatusCode } from "../types";
 import { SUBREDDITS, SUB_EXPIRE, SUB_PREFIX_KEY } from "../utils/constants";
 import { getNPosts, onlyImagePosts } from "../utils/functions";
 
@@ -97,8 +97,14 @@ async function getPostsData(c: Context<{ Bindings: Bindings }>, kv: KVNamespace,
     const { posts: freshPosts, response } = await getPosts(c, subreddit, 100);
 
     if (isNullishOrEmpty(freshPosts)) {
-        c.status(response.code);
-        throw error.InternalServerError(response.message);
+        switch (response.code) {
+            case StatusCode.NotFound:
+                throw error.NotFound(response.message);
+            case StatusCode.Forbidden:
+                throw error.BadRequest(response.message);
+            default:
+                throw error.InternalServerError(response.message);
+        }
     }
 
     const imagePosts = onlyImagePosts(freshPosts);

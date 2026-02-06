@@ -7,18 +7,18 @@
     "author": "",
     "license": "MIT",
     "scripts": {
-        "dev": "wrangler dev src/index.ts",
-        "deploy": "wrangler deploy --minify src/index.ts"
+        "dev": "wrangler dev",
+        "deploy": "wrangler deploy"
     },
     "dependencies": {
         "@sapphire/utilities": "^3.18.2",
         "destr": "^2.0.5",
-        "hono": "^4.11.4",
+        "hono": "^4.11.8",
         "html-entities": "^2.6.0"
     },
     "devDependencies": {
-        "@cloudflare/workers-types": "^4.20260120.0",
-        "@types/node": "^20.19.30",
-        "wrangler": "^4.59.3"
+        "@cloudflare/workers-types": "^4.20260206.0",
+        "@types/node": "^20.19.32",
+        "wrangler": "^4.63.0"
     }
 }

@@ -1,13 +1,27 @@
 {
-  "name": "reddviz",
-  "compatibility_date": "2023-12-01",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
-  "kv_namespaces": [
-    {
-      "binding": "REDDVIZ_KV",
-      "id": "126a8a3986ba4418949b33214769640d"
+    "name": "reddviz",
+    "compatibility_date": "2026-02-06",
+    "compatibility_flags": ["nodejs_compat"],
+    "main": "src/index.ts",
+    "kv_namespaces": [
+        {
+            "binding": "REDDVIZ_KV",
+            "id": "126a8a3986ba4418949b33214769640d"
+        }
+    ],
+    "observability": {
+        "enabled": false,
+        "head_sampling_rate": 1,
+        "logs": {
+            "enabled": true,
+            "head_sampling_rate": 1,
+            "persist": true,
+            "invocation_logs": true
+        },
+        "traces": {
+            "enabled": false,
+            "persist": true,
+            "head_sampling_rate": 1
+        }
     }
-  ]
 }
