@@ -1,15 +1,15 @@
-import { Hono } from "hono";
-import { HTTPError } from "./middleware/error";
 import { createMiddleware } from "hono/factory";
+import type { ContentfulStatusCode } from "hono/utils/http-status";
+import { Hono } from "hono";
 import { trimTrailingSlash } from "hono/trailing-slash";
+import { HTTPError } from "./error";
 import { gimme, home } from "./handler";
 import { Bindings } from "./types";
 
 const app = new Hono<{ Bindings: Bindings }>();
 
 const kv = createMiddleware<{ Bindings: Bindings }>(async (c, next) => {
-    const kv = c.env.REDDVIZ_KV;
-    c.set("kv", kv);
+    c.set("kv", c.env.REDDVIZ_KV);
     await next();
 });
 
@@ -17,19 +17,16 @@ app.use(trimTrailingSlash());
 app.use(kv);
 
 app.onError((err, c) => {
-    if (err instanceof HTTPError) {
-        c.status(err.code);
-        return c.json({
-            success: false,
-            message: err.message,
-        });
+    if (!(err instanceof HTTPError)) {
+        return c.json(
+            { success: false, message: "Internal Server Error" },
+            500,
+        );
     }
-
-    c.status(500);
-    return c.json({
-        success: false,
-        message: "Internal Server Error",
-    });
+    return c.json(
+        { success: false, message: err.message },
+        err.code as ContentfulStatusCode,
+    );
 });
 
 app.route("/", home);

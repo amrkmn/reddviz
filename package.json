@@ -1,24 +1,29 @@
 {
     "name": "reddviz",
     "version": "1.0.0",
-    "description": "```\r bun install\r bun run dev\r ```",
-    "main": "index.js",
+    "description": "Serverless Reddit posts viewer deployed on Cloudflare Workers",
+    "main": "src/index.ts",
     "keywords": [],
     "author": "",
     "license": "MIT",
     "scripts": {
         "dev": "wrangler dev",
-        "deploy": "wrangler deploy"
+        "deploy": "wrangler deploy",
+        "cf-typegen": "wrangler types --env-interface CloudflareBindings"
     },
     "dependencies": {
-        "@sapphire/utilities": "^3.18.2",
-        "destr": "^2.0.5",
-        "hono": "^4.11.8",
-        "html-entities": "^2.6.0"
+        "hono": "^4.13.3"
     },
     "devDependencies": {
-        "@cloudflare/workers-types": "^4.20260206.0",
-        "@types/node": "^20.19.32",
-        "wrangler": "^4.63.0"
+        "@types/node": "^26.2.0",
+        "typescript": "^7.0.2",
+        "wrangler": "^4.125.0"
+    },
+    "devEngines": {
+        "packageManager": {
+            "name": "nub",
+            "version": "^0.7.5",
+            "onFail": "ignore"
+        }
     }
 }
