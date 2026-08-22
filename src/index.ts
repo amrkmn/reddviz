@@ -1,7 +1,7 @@
-import { createMiddleware } from "hono/factory";
-import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { Hono } from "hono";
+import { createMiddleware } from "hono/factory";
 import { trimTrailingSlash } from "hono/trailing-slash";
+import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { HTTPError } from "./error";
 import { gimme, home } from "./handler";
 
