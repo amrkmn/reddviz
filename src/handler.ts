@@ -3,9 +3,9 @@ import { Hono } from "hono";
 import { SUBREDDITS, SUB_EXPIRE, SUB_PREFIX_KEY } from "./constants";
 import { HTTPError } from "./error";
 import { getPosts } from "./reddit";
-import { Bindings, Post } from "./types";
+import type { Post } from "./types";
 
-const home = new Hono<{ Bindings: Bindings }>();
+const home = new Hono<{ Bindings: CloudflareBindings }>();
 
 home.get("/", (c) =>
     c.text(
@@ -15,7 +15,7 @@ home.get("/", (c) =>
 
 const IMAGE_EXT = /\.(jpe?g|png|gif)$/i;
 
-const gimme = new Hono<{ Bindings: Bindings }>();
+const gimme = new Hono<{ Bindings: CloudflareBindings }>();
 
 /**
  * Get random posts from a subreddit
@@ -61,7 +61,7 @@ gimme.get("/:subreddit?", async (c) => {
 });
 
 async function getCachedPosts(
-    c: Context<{ Bindings: Bindings }>,
+    c: Context<{ Bindings: CloudflareBindings }>,
     subreddit: string,
 ): Promise<Post[]> {
     const kv = c.get("kv");

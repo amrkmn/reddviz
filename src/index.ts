@@ -4,11 +4,10 @@ import { Hono } from "hono";
 import { trimTrailingSlash } from "hono/trailing-slash";
 import { HTTPError } from "./error";
 import { gimme, home } from "./handler";
-import { Bindings } from "./types";
 
-const app = new Hono<{ Bindings: Bindings }>();
+const app = new Hono<{ Bindings: CloudflareBindings }>();
 
-const kv = createMiddleware<{ Bindings: Bindings }>(async (c, next) => {
+const kv = createMiddleware<{ Bindings: CloudflareBindings }>(async (c, next) => {
     c.set("kv", c.env.REDDVIZ_KV);
     await next();
 });

@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import { ACCESS_TOKEN_KEY, FETCH_HEADERS, TIMES } from "./constants";
 import { HTTPError } from "./error";
-import type { Bindings, Post, RedditListing, RedditPostData } from "./types";
+import type { Post, RedditListing, RedditPostData } from "./types";
 
 // ponytail: only decodes the 5 HTML entities reddit emits; swap in a full decoder if titles ever show stray entities
 const decode = (s: string) =>
@@ -12,7 +12,7 @@ const decode = (s: string) =>
         .replace(/&quot;/g, '"')
         .replace(/&#39;/g, "'");
 
-async function fetchToken(c: Context<{ Bindings: Bindings }>): Promise<string> {
+async function fetchToken(c: Context<{ Bindings: CloudflareBindings }>): Promise<string> {
     const auth = btoa(
         `${c.env.REDDIT_CLIENT_ID}:${c.env.REDDIT_CLIENT_SECRET}`,
     );
@@ -54,7 +54,7 @@ function apiError(status: number): HTTPError {
 }
 
 export async function getPosts(
-    c: Context<{ Bindings: Bindings }>,
+    c: Context<{ Bindings: CloudflareBindings }>,
     subreddit: string,
 ): Promise<Post[]> {
     const time = TIMES[Math.floor(Math.random() * TIMES.length)];

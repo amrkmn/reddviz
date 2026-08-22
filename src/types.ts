@@ -4,12 +4,6 @@ declare module "hono" {
     }
 }
 
-export type Bindings = {
-    REDDIT_CLIENT_ID: string;
-    REDDIT_CLIENT_SECRET: string;
-    REDDVIZ_KV: KVNamespace;
-};
-
 export interface Post {
     id: string;
     title: string;
