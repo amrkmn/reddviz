@@ -2,12 +2,14 @@
 
 A serverless application deployed on Cloudflare Workers to fetch and display posts from Reddit.
 
+> **Disclaimer:** This project was inspired by [D3vd/Meme_Api](https://github.com/D3vd/Meme_Api) but is written from scratch for Cloudflare Workers.
+
 ## Tech Stack
 
--   **Language:** TypeScript
--   **Framework:** Hono
--   **Environment:** Cloudflare Workers
--   **Package Manager:** Bun
+- **Language:** TypeScript
+- **Framework:** Hono
+- **Environment:** Cloudflare Workers
+- **Package Manager:** Bun
 
 ## Getting Started
 
@@ -36,8 +38,8 @@ A serverless application deployed on Cloudflare Workers to fetch and display pos
 
 ## Available Scripts
 
--   `bun run dev`: Start the development server.
--   `bun run deploy`: Deploy the application to Cloudflare Workers.
+- `bun run dev`: Start the development server.
+- `bun run deploy`: Deploy the application to Cloudflare Workers.
 
 ## License
 
