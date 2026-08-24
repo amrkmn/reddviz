@@ -65,7 +65,9 @@ async function getCachedPosts(
     subreddit: string,
 ): Promise<Post[]> {
     const kv = c.get("kv");
-    const cached = await kv.get<Post[]>(`${SUB_PREFIX_KEY}${subreddit}`);
+    const cached = await kv.get<Post[]>(`${SUB_PREFIX_KEY}${subreddit}`, {
+        type: "json",
+    });
     // ponytail: Array.isArray guards against stale/garbage cache entries (a non-array parses to a string; indexing it yields single letters)
     if (Array.isArray(cached) && cached.length > 0) return cached;
 
