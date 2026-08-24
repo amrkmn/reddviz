@@ -7,10 +7,12 @@ import { gimme, home } from "./handler";
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 
-const kv = createMiddleware<{ Bindings: CloudflareBindings }>(async (c, next) => {
-    c.set("kv", c.env.REDDVIZ_KV);
-    await next();
-});
+const kv = createMiddleware<{ Bindings: CloudflareBindings }>(
+    async (c, next) => {
+        c.set("kv", c.env.REDDVIZ_KV);
+        await next();
+    },
+);
 
 app.use(trimTrailingSlash());
 app.use(kv);

@@ -12,7 +12,9 @@ const decode = (s: string) =>
         .replace(/&quot;/g, '"')
         .replace(/&#39;/g, "'");
 
-async function fetchToken(c: Context<{ Bindings: CloudflareBindings }>): Promise<string> {
+async function fetchToken(
+    c: Context<{ Bindings: CloudflareBindings }>,
+): Promise<string> {
     const auth = btoa(
         `${c.env.REDDIT_CLIENT_ID}:${c.env.REDDIT_CLIENT_SECRET}`,
     );
@@ -28,11 +30,9 @@ async function fetchToken(c: Context<{ Bindings: CloudflareBindings }>): Promise
         access_token: string;
         expires_in: number;
     };
-    await c
-        .get("kv")
-        .put(ACCESS_TOKEN_KEY, data.access_token, {
-            expirationTtl: data.expires_in,
-        });
+    await c.get("kv").put(ACCESS_TOKEN_KEY, data.access_token, {
+        expirationTtl: data.expires_in,
+    });
     return data.access_token;
 }
 
