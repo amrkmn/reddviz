@@ -18,6 +18,13 @@ jobs:
       - name: Check out repository
         uses: https://github.com/actions/checkout@v7
 
+      - name: Prepare Node environment
+        shell: bash
+        run: |
+          node_bin="$(dirname "$(readlink -f "$(command -v node)")")"
+          echo "$node_bin" >> "$GITHUB_PATH"
+          npm config set allow-scripts=@nubjs/nub --location=user
+
       - name: Set up Nub
         uses: https://github.com/nubjs/setup-nub@v0
         with:
