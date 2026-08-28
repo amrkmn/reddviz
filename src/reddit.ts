@@ -36,19 +36,15 @@ async function fetchToken(
     return data.access_token;
 }
 
-// Maps reddit API failures to the (status, message) pairs the API has always returned.
-function apiError(status: number): HTTPError {
+function apiError(status: number, subreddit: string): HTTPError {
     const messages: Record<number, [number, string]> = {
-        403: [
-            400,
-            "unable to access subreddit. subreddit is locked or private",
-        ],
-        404: [404, "this subreddit does not exist."],
-        500: [503, "reddit is unreachable at the moment"],
+        403: [400, `r/${subreddit} is private or locked and can't be accessed`],
+        404: [404, `r/${subreddit} does not exist`],
+        500: [503, "reddit is temporarily unreachable, please try again later"],
     };
     const [code, message] = messages[status] ?? [
         500,
-        "unknown error while getting posts. please try again",
+        `unexpected error from reddit (status ${status}) while fetching r/${subreddit}`,
     ];
     return new HTTPError(code as 500, message);
 }
@@ -73,7 +69,7 @@ export async function getPosts(
         });
     }
 
-    if (res.status !== 200) throw apiError(res.status);
+    if (res.status !== 200) throw apiError(res.status, subreddit);
 
     const listing = (await res
         .json()
@@ -82,7 +78,7 @@ export async function getPosts(
     if (children.length === 0)
         throw new HTTPError(
             404,
-            "this subreddit has no posts or doesn't exist.",
+            `r/${subreddit} has no posts or doesn't exist`,
         );
 
     return children.map(({ data }) => toPost(data));

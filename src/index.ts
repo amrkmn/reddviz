@@ -20,7 +20,10 @@ app.use(kv);
 app.onError((err, c) => {
     if (!(err instanceof HTTPError)) {
         return c.json(
-            { success: false, message: "Internal Server Error" },
+            {
+                success: false,
+                message: "internal server error, please try again later",
+            },
             500,
         );
     }
