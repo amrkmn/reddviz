@@ -3,7 +3,8 @@ import { createMiddleware } from "hono/factory";
 import { trimTrailingSlash } from "hono/trailing-slash";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { HTTPError } from "./error";
-import { gimme, home } from "./handler";
+import { gimme } from "./gimme";
+import { home } from "./home";
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 
