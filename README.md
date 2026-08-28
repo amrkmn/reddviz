@@ -4,42 +4,106 @@ A serverless application deployed on Cloudflare Workers to fetch and display pos
 
 > **Disclaimer:** This project was inspired by [D3vd/Meme_Api](https://github.com/D3vd/Meme_Api) but is written from scratch for Cloudflare Workers.
 
-## Tech Stack
+## Tech stack
 
-- **Language:** TypeScript
-- **Framework:** Hono
-- **Environment:** Cloudflare Workers
-- **Package Manager:** Bun
+Written in TypeScript with the Hono framework, deployed on Cloudflare Workers, and managed with [nub](https://nubjs.com/).
 
-## Getting Started
+## Getting started
 
-1.  **Install dependencies:**
+1.  Install dependencies:
 
     ```bash
-    bun install
+    nub install
     ```
 
-2.  **Configure secrets:**
-
-    Set the required secrets using `wrangler secret put`:
+2.  Set the required secrets with `wrangler secret put`:
 
     ```bash
     wrangler secret put REDDIT_CLIENT_ID
     wrangler secret put REDDIT_CLIENT_SECRET
     ```
 
-    Ensure your `wrangler.jsonc` is configured with the correct `kv_namespaces` id.
+    Make sure your `wrangler.jsonc` has the correct `kv_namespaces` id.
 
-3.  **Run the development server:**
+3.  Start the dev server:
 
     ```bash
-    bun run dev
+    nub run dev
     ```
 
-## Available Scripts
+## API usage
 
-- `bun run dev`: Start the development server.
-- `bun run deploy`: Deploy the application to Cloudflare Workers.
+Base URL: your deployed Workers URL (or `http://localhost:8787` in dev).
+
+### `GET /gimme/:subreddit?`
+
+Returns a random post with an image from a subreddit. If `subreddit` is omitted, a random default subreddit is used.
+
+Query parameters:
+
+| Param         | Description                                                                  |
+| ------------- | ---------------------------------------------------------------------------- |
+| `c` / `count` | Number of posts to return (1-50). Returns an array instead of a single post. |
+| `nonsfw`      | If present, filters out NSFW posts.                                          |
+
+A request for a single post:
+
+```bash
+curl https://<worker-url>/gimme/memes
+```
+
+```json
+{
+    "id": "abc123",
+    "title": "Some meme",
+    "subreddit": "memes",
+    "author": "someone",
+    "postLink": "https://www.reddit.com/r/memes/comments/abc123/some_meme/",
+    "thumbnail": "https://preview.redd.it/...",
+    "image": "https://i.redd.it/....jpg",
+    "nsfw": false,
+    "spoiler": false,
+    "upvotes": 1234,
+    "comments": 56,
+    "createdUtc": 1735689600,
+    "upvoteRatio": 0.95,
+    "preview": {
+        "images": ["https://preview.redd.it/..."],
+        "gifs": []
+    }
+}
+```
+
+A request for multiple posts:
+
+```bash
+curl "https://<worker-url>/gimme/memes?c=5&nonsfw"
+```
+
+```json
+{
+    "count": 5,
+    "posts": [{ "id": "abc123", "...": "..." }]
+}
+```
+
+Errors return `"success": false` with a message:
+
+```json
+{ "success": false, "message": "r/memes does not exist" }
+```
+
+| Status | Cause                                                                              |
+| ------ | ---------------------------------------------------------------------------------- |
+| 400    | Invalid `count` value, or subreddit is private/locked                              |
+| 404    | Subreddit doesn't exist, has no image posts, or all posts are NSFW (with `nonsfw`) |
+| 500    | Unexpected error from Reddit                                                       |
+| 503    | Reddit is temporarily unreachable                                                  |
+
+## Available scripts
+
+- `nub run dev`: Start the development server.
+- `nub run deploy`: Deploy the application to Cloudflare Workers.
 
 ## License
 
