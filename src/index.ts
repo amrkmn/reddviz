@@ -1,7 +1,6 @@
 import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
 import { trimTrailingSlash } from "hono/trailing-slash";
-import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { HTTPError } from "./error";
 import { gimme } from "./gimme";
 import { home } from "./home";
@@ -28,10 +27,7 @@ app.onError((err, c) => {
             500,
         );
     }
-    return c.json(
-        { success: false, message: err.message },
-        err.code as ContentfulStatusCode,
-    );
+    return c.json({ success: false, message: err.message }, err.code);
 });
 
 app.route("/", home);

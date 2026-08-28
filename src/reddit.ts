@@ -26,6 +26,7 @@ async function fetchToken(
 
     if (!res.ok) return "";
 
+    // SAFETY: reddit's client-credentials endpoint returns { access_token, expires_in } on 2xx
     const data = (await res.json()) as {
         access_token: string;
         expires_in: number;
@@ -37,16 +38,25 @@ async function fetchToken(
 }
 
 function apiError(status: number, subreddit: string): HTTPError {
-    const messages: Record<number, [number, string]> = {
-        403: [400, `r/${subreddit} is private or locked and can't be accessed`],
-        404: [404, `r/${subreddit} does not exist`],
-        500: [503, "reddit is temporarily unreachable, please try again later"],
-    };
-    const [code, message] = messages[status] ?? [
-        500,
-        `unexpected error from reddit (status ${status}) while fetching r/${subreddit}`,
-    ];
-    return new HTTPError(code as 500, message);
+    switch (status) {
+        case 403:
+            return new HTTPError(
+                400,
+                `r/${subreddit} is private or locked and can't be accessed`,
+            );
+        case 404:
+            return new HTTPError(404, `r/${subreddit} does not exist`);
+        case 500:
+            return new HTTPError(
+                503,
+                "reddit is temporarily unreachable, please try again later",
+            );
+        default:
+            return new HTTPError(
+                500,
+                `unexpected error from reddit (status ${status}) while fetching r/${subreddit}`,
+            );
+    }
 }
 
 export async function getPosts(
@@ -71,6 +81,7 @@ export async function getPosts(
 
     if (res.status !== 200) throw apiError(res.status, subreddit);
 
+    // SAFETY: a 200 from oauth.reddit.com is a listing JSON; parse failures fall back to null
     const listing = (await res
         .json()
         .catch(() => null)) as RedditListing | null;
