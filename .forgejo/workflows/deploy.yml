@@ -4,6 +4,12 @@ on:
     push:
         branches:
             - main
+        paths:
+            - "src/**"
+            - "wrangler.jsonc"
+            - "package.json"
+            - "nub.lock"
+            - "worker-configuration.d.ts"
 
 concurrency:
     group: deploy-${{ forgejo.ref }}
