@@ -34,7 +34,6 @@ jobs:
             - name: Set up Nub
               uses: https://github.com/nubjs/setup-nub@v0
               with:
-                  nub-version: 0.7.5
                   cache: false
 
             - name: Install dependencies
