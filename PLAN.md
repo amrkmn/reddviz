@@ -26,10 +26,10 @@ progress tracker. Source: full-repo review at commit `3bb1586`.
 | Tier                 | Items  | Done   |
 | -------------------- | ------ | ------ |
 | 1 — Quick wins       | 8      | 8      |
-| 2 — Small fixes & CI | 5      | 2      |
+| 2 — Small fixes & CI | 5      | 3      |
 | 3 — Features         | 6      | 0      |
 | 4 — Decide first     | 3      | 0      |
-| **Total**            | **22** | **10** |
+| **Total**            | **22** | **11** |
 
 Base gates are green today (`nub run lint`, `nub run format:check`, and
 `./node_modules/.bin/tsc --noEmit` all exit 0), so nothing below has to work
@@ -121,12 +121,15 @@ One defined answer each, but they touch shared paths or CI config.
       Done when: `?c=abc`, `?c=5.5` and `?c=0x10` all return 400; `?c=5` still
       returns 5 posts. Values above 50 still clamp to 50 rather than 400.
 
-- [ ] **2.3 — Gate CI on lint, format and typecheck**
-      `.forgejo/workflows/deploy.yml` runs `nub ci` → `nub run deploy` with no
-      checks. Add `nub run lint`, `nub run format:check`, `nub run typecheck` (after
-      1.1) either as a `ci.yml` on push/PR or as steps before deploy. Safe to grade
-      absolutely: all three are green at base.
+- [x] **2.3 — Gate CI on lint, format and typecheck**
+      `.forgejo/workflows/deploy.yml` ran `nub ci` → `nub run deploy` with no
+      checks. Added the three checks as a step inside the deploy job (rather than a
+      separate `ci.yml`) so a failure actually blocks the deploy instead of only
+      reporting alongside it.
       Done when: a commit touching only `src/` fails CI when lint or typecheck fails.
+      Verified locally that each command fails on a real violation in `src/`
+      (`anti-slop/no-unknown-parameters` → lint exit 1, type error → typecheck exit 1) and that the YAML parses with the step in the right position. The actual
+      Forgejo run is unverified — needs a real push.
 
 - [ ] **2.4 — Drop `nodejs_compat` if nothing needs it**
       `wrangler.jsonc`. No file under `src/` imports a node builtin, but `btoa` and

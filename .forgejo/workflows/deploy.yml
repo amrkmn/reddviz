@@ -40,6 +40,12 @@ jobs:
             - name: Install dependencies
               run: nub ci
 
+            - name: Verify lint, format and types
+              run: |
+                  nub run lint
+                  nub run format:check
+                  nub run typecheck
+
             - name: Deploy Worker
               run: nub run deploy --message "$(git log -1 --pretty=%s)"
               env:
