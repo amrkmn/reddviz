@@ -25,11 +25,11 @@ progress tracker. Source: full-repo review at commit `3bb1586`.
 
 | Tier | Items | Done |
 | ---- | ----- | ---- |
-| 1 — Quick wins | 8 | 1 |
+| 1 — Quick wins | 8 | 2 |
 | 2 — Small fixes & CI | 5 | 0 |
 | 3 — Features | 6 | 0 |
 | 4 — Decide first | 3 | 0 |
-| **Total** | **22** | **1** |
+| **Total** | **22** | **2** |
 
 Base gates are green today (`nub run lint`, `nub run format:check`, and
 `./node_modules/.bin/tsc --noEmit` all exit 0), so nothing below has to work
@@ -46,7 +46,7 @@ No decisions required. Each is a single file.
   does not typecheck. Add `"typecheck": "tsc --noEmit"`.
   Done when: `nub run typecheck` exits 0 (it already does, unscripted).
 
-- [ ] **1.2 — Log unexpected errors in `onError`**
+- [x] **1.2 — Log unexpected errors in `onError`**
   `src/index.ts:20-31`. Non-`HTTPError` becomes a bare 500 with no log line, so
   production 500s are undebuggable despite `observability.logs.enabled: true`.
   Add `console.error(err)` in that branch.

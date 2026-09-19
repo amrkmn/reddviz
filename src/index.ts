@@ -19,6 +19,7 @@ app.use(kv);
 
 app.onError((err, c) => {
     if (!(err instanceof HTTPError)) {
+        console.error(err);
         return c.json(
             {
                 success: false,
