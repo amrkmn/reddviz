@@ -32,12 +32,14 @@ jobs:
                   echo "$node_bin" >> "$GITHUB_PATH"
                   npm config set allow-scripts=@nubjs/nub --location=user
 
-            # the job image ships /root/.cache world-writable, which nub refuses as
-            # a runtime cache ancestor; the stat line records the modes the image
-            # actually ships, before this step changes anything
+            # /root/.cache does not exist in a fresh job container, and whatever
+            # creates it first during the job does so world-writable here, which nub
+            # refuses as a runtime cache ancestor. Creating it up front at 755 means
+            # later steps inherit a usable parent instead.
             - name: Prepare the nub cache dir
               shell: bash
               run: |
+                  umask
                   stat -c '%a %U %n' /root /root/.cache || true
                   mkdir -p /root/.cache
                   chmod 755 /root/.cache
