@@ -58,16 +58,17 @@ gimme.get("/:subreddit?", async (c) => {
     return c.json(visible[Math.floor(Math.random() * visible.length)]);
 });
 
-// invalid or non-numeric counts return null (single-post mode); 0/negative is rejected
+// omitting the count selects single-post mode; anything present must be whole
+// digits in range, so a typo can't silently fall back to one post
 function parseCount(raw: string | undefined): number | null {
-    if (raw === undefined || Number.isNaN(Number(raw))) return null;
-    const count = Math.min(Number(raw), MAX_COUNT);
-    if (count <= 0)
+    if (raw === undefined) return null;
+    // strict digits: rejects 5.5, 0x10, 1e3, negatives and blanks
+    if (!/^\d+$/.test(raw) || Number(raw) < 1)
         throw new HTTPError(
             400,
-            `invalid count value "${raw}": must be a positive number (max ${MAX_COUNT})`,
+            `invalid count value "${raw}": must be a whole number between 1 and ${MAX_COUNT}`,
         );
-    return count;
+    return Math.min(Number(raw), MAX_COUNT);
 }
 
 // returns cached image posts for a subreddit, fetching and caching them on a miss

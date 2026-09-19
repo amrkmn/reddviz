@@ -23,13 +23,13 @@ progress tracker. Source: full-repo review at commit `3bb1586`.
 
 ### Progress
 
-| Tier                 | Items  | Done  |
-| -------------------- | ------ | ----- |
-| 1 — Quick wins       | 8      | 8     |
-| 2 — Small fixes & CI | 5      | 1     |
-| 3 — Features         | 6      | 0     |
-| 4 — Decide first     | 3      | 0     |
-| **Total**            | **22** | **9** |
+| Tier                 | Items  | Done   |
+| -------------------- | ------ | ------ |
+| 1 — Quick wins       | 8      | 8      |
+| 2 — Small fixes & CI | 5      | 2      |
+| 3 — Features         | 6      | 0      |
+| 4 — Decide first     | 3      | 0      |
+| **Total**            | **22** | **10** |
 
 Base gates are green today (`nub run lint`, `nub run format:check`, and
 `./node_modules/.bin/tsc --noEmit` all exit 0), so nothing below has to work
@@ -114,13 +114,12 @@ One defined answer each, but they touch shared paths or CI config.
       accurate status and message. Mapped 401 and 429 to distinct 503 messages;
       a failed token fetch now throws instead of continuing with an empty bearer.
 
-- [ ] **2.2 — Make invalid counts actually return 400**
-      `src/gimme.ts:52-53` vs `README.md:98` and `src/home.ts:75-80`. `?c=abc`
-      silently serves one random post while the docs promise 400. Reject non-numeric
-      with 400; use `Number.isInteger` to also drop `5.5` (coerced to 5 by `slice`)
-      and `0x10` (= 16).
+- [x] **2.2 — Make invalid counts actually return 400**
+      `src/gimme.ts:52-53` vs `README.md:98`. `?c=abc` silently served one random
+      post while the docs promised 400. Rejected non-digit values with 400, which
+      also drops `5.5` (coerced to 5 by `slice`), `0x10` (= 16) and `1e3`.
       Done when: `?c=abc`, `?c=5.5` and `?c=0x10` all return 400; `?c=5` still
-      returns 5 posts.
+      returns 5 posts. Values above 50 still clamp to 50 rather than 400.
 
 - [ ] **2.3 — Gate CI on lint, format and typecheck**
       `.forgejo/workflows/deploy.yml` runs `nub ci` → `nub run deploy` with no
