@@ -28,15 +28,6 @@ home.get("/", (c) =>
                             padding: 0.1rem 0.3rem;
                             border-radius: 3px;
                         }
-                        table {
-                            border-collapse: collapse;
-                        }
-                        th,
-                        td {
-                            border: 1px solid #ccc;
-                            padding: 0.3rem 0.6rem;
-                            text-align: left;
-                        }
                         @media (prefers-color-scheme: dark) {
                             body {
                                 background: #121212;
@@ -44,10 +35,6 @@ home.get("/", (c) =>
                             }
                             code {
                                 background: #2a2a2a;
-                            }
-                            th,
-                            td {
-                                border-color: #444;
                             }
                         }
                     </style>
@@ -60,45 +47,15 @@ home.get("/", (c) =>
                         JSON.
                     </p>
 
-                    <h2>Usage</h2>
                     <p>
                         <code>GET /gimme/:subreddit?</code> returns a random
-                        post with an image from a subreddit. Omit the subreddit
-                        to pick a random default one.
-                    </p>
-                    <table>
-                        <tr>
-                            <th>Query param</th>
-                            <th>Description</th>
-                        </tr>
-                        <tr>
-                            <td><code>c</code> / <code>count</code></td>
-                            <td>
-                                Number of posts to return (1-50). Returns an
-                                array instead of a single post.
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><code>nonsfw</code></td>
-                            <td>If present, filters out NSFW posts.</td>
-                        </tr>
-                    </table>
-
-                    <h2>Examples</h2>
-                    <p>
-                        <code>/gimme/memes</code> returns one random post from
-                        r/memes<br />
-                        <code>/gimme/memes?c=5&nonsfw</code> returns 5 random
-                        SFW posts from r/memes
+                        post with an image from a subreddit, or several with
+                        <code>?c</code>. Omit the subreddit to pick a random
+                        default one.
                     </p>
 
                     <p>
-                        Responses are JSON; errors return
-                        <code>{"success": false, "message": "..."}</code>.
-                    </p>
-
-                    <p>
-                        Docs and source:
+                        Query parameters and response shape:
                         <a
                             href="https://noz.one/ujol/reddviz"
                             target="_blank"

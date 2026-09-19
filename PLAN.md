@@ -25,11 +25,11 @@ progress tracker. Source: full-repo review at commit `3bb1586`.
 
 | Tier                 | Items  | Done  |
 | -------------------- | ------ | ----- |
-| 1 — Quick wins       | 8      | 5     |
+| 1 — Quick wins       | 8      | 6     |
 | 2 — Small fixes & CI | 5      | 0     |
 | 3 — Features         | 6      | 0     |
 | 4 — Decide first     | 3      | 0     |
-| **Total**            | **22** | **5** |
+| **Total**            | **22** | **6** |
 
 Base gates are green today (`nub run lint`, `nub run format:check`, and
 `./node_modules/.bin/tsc --noEmit` all exit 0), so nothing below has to work
@@ -77,7 +77,7 @@ No decisions required. Each is a single file.
       Done when: the README has a local-dev secrets step naming `.dev.vars` and its
       two keys.
 
-- [ ] **1.6 — Stop duplicating the API table on the homepage**
+- [x] **1.6 — Stop duplicating the API table on the homepage**
       `src/home.ts:69-98` vs `README.md:44-101` — two copies of one contract that
       will drift. Trim the landing page to a one-line usage summary plus a link.
       Done when: the query-param table exists in exactly one place.
