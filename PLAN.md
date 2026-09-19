@@ -26,10 +26,10 @@ progress tracker. Source: full-repo review at commit `3bb1586`.
 | Tier                 | Items  | Done   |
 | -------------------- | ------ | ------ |
 | 1 — Quick wins       | 8      | 8      |
-| 2 — Small fixes & CI | 5      | 3      |
+| 2 — Small fixes & CI | 5      | 4      |
 | 3 — Features         | 6      | 0      |
 | 4 — Decide first     | 3      | 0      |
-| **Total**            | **22** | **11** |
+| **Total**            | **22** | **12** |
 
 Base gates are green today (`nub run lint`, `nub run format:check`, and
 `./node_modules/.bin/tsc --noEmit` all exit 0), so nothing below has to work
@@ -131,12 +131,16 @@ One defined answer each, but they touch shared paths or CI config.
       (`anti-slop/no-unknown-parameters` → lint exit 1, type error → typecheck exit 1) and that the YAML parses with the step in the right position. The actual
       Forgejo run is unverified — needs a real push.
 
-- [ ] **2.4 — Drop `nodejs_compat` if nothing needs it**
-      `wrangler.jsonc`. No file under `src/` imports a node builtin, but `btoa` and
-      friends come from the Workers runtime, not from compat flags — verify by
-      deploy, do not assume.
+- [x] **2.4 — Drop `nodejs_compat` if nothing needs it**
+      `wrangler.jsonc`. Nothing under `src/` imports a node builtin; `btoa`, `fetch`,
+      `URL` and `URLSearchParams` are Workers/Web globals, not compat-flag features.
+      Flag removed and `worker-configuration.d.ts` regenerated (the
+      `NodeJS.ProcessEnv` augmentation disappears, confirming the flag took effect —
+      most of that file's diff is the workerd bump from the wrangler upgrade).
       Done when: the flag is removed, the Worker deploys, and `/gimme/memes` returns
-      200 in production.
+      200 in production. Verified locally against real workerd: `/` 200, the three
+      validation paths 400, no runtime errors, and the bundle shrank 96.24 → 77.71
+      KiB. The production deploy is unverified — needs a real push.
 
 - [ ] **2.5 — Add a staging environment with its own KV**
       `wrangler.jsonc` has one namespace (prod) and one binding. A second env plus

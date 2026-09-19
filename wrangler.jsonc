@@ -1,7 +1,6 @@
 {
     "name": "reddviz",
     "compatibility_date": "2026-02-06",
-    "compatibility_flags": ["nodejs_compat"],
     "main": "src/index.ts",
     "kv_namespaces": [
         {
