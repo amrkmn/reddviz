@@ -188,12 +188,22 @@ Multi-file, but the approach is already clear.
       Done when: a browser page on an allowed origin can read the response, and a
       disallowed origin cannot.
 
-- [ ] **3.5 — Support `?nsfw=only`**
-      `nonsfw` is a presence flag, so absence means NSFW _included_ and there is no
-      way to request NSFW-only. Check D3vd's `nsfw` param semantics first if
-      compatibility with the API credited in the README matters.
-      Done when: the three states (default / `nonsfw` / nsfo-only) are each
-      reachable and documented.
+- [ ] **3.5 — Support `?nsfw` alongside the existing `nonsfw`**
+      `src/gimme.ts:33` treats `nonsfw` as a presence flag: absence means NSFW
+      _included_ and there is no way to ask for NSFW-only. Add `?nsfw` as an explicit
+      three-state param — `false` (exclude, same as `nonsfw`), `true` (include,
+      today's default) and `only` (NSFW only, the new capability) — leaving `nonsfw`
+      working unchanged for existing callers. A bare `?nsfw`, an empty or unknown
+      value, or a contradictory pair (`nonsfw` together with `true`/`only`) all 400
+      with the accepted values in the message, rather than silently defaulting or
+      letting one param quietly win — the same stand 2.2 took on counts. Needs the
+      mirror of the existing `nonsfw` 404 at `src/gimme.ts:47-51` for "no NSFW posts
+      here".
+      Confirm D3vd's `nsfw` value format before locking this in, since the README
+      credits that API and its param is the compatibility reference.
+      Done when: all three `nsfw` states are reachable and documented in the README
+      param table, `nonsfw` behaves exactly as today, and every rejected form returns
+      400 naming the accepted values.
 
 - [ ] **3.6 — Rate-limit `/gimme`**
       Nothing bounds request volume; each request can cost a reddit fetch plus a KV
