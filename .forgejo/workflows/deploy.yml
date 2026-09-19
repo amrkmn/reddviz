@@ -33,10 +33,7 @@ jobs:
                   echo "$node_bin" >> "$GITHUB_PATH"
                   npm config set allow-scripts=@nubjs/nub --location=user
 
-            # the job container runs with umask 0000, so nub's own mkdir leaves
-            # /root/.cache and /root/.cache/nub world-writable, and it then refuses
-            # that path as its runtime cache. Pre-create both; nub reuses an existing
-            # directory without loosening its mode.
+            # this container runs with umask 0000, and nub refuses a world-writable cache dir
             - name: Prepare the nub cache dir
               shell: bash
               run: |
