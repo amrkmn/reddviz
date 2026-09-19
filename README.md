@@ -38,24 +38,6 @@ Written in TypeScript with the Hono framework, deployed on Cloudflare Workers, a
     nub run dev
     ```
 
-### Staging environment
-
-`wrangler.jsonc` defines a `staging` environment with its own KV namespace
-(`REDDVIZ_KV_STAGING`), so experiments and test data stay out of production
-cache. Named environments don't inherit the top-level secrets, so staging needs
-its own:
-
-```bash
-# one-time setup
-wrangler secret put REDDIT_CLIENT_ID --env staging
-wrangler secret put REDDIT_CLIENT_SECRET --env staging
-
-wrangler dev --env staging     # serves the reddviz-staging worker
-wrangler deploy --env staging  # deploys it
-```
-
-The deploy workflow only deploys production; staging deploys are manual.
-
 ## API usage
 
 Base URL: your deployed Workers URL (or `http://localhost:8787` in dev).
