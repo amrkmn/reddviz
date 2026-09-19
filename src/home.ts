@@ -55,6 +55,15 @@ home.get("/", (c) =>
                     </p>
 
                     <p>
+                        Draw only from one time window with
+                        <code>?t=day|week|month|year|all</code> (omitted, a
+                        window is picked at random), and control NSFW posts with
+                        <code>?nsfw=true|false|only</code>.
+                        <code>GET /health</code> reports the deployed version
+                        without calling Reddit.
+                    </p>
+
+                    <p>
                         Query parameters and response shape:
                         <a
                             href="https://noz.one/ujol/reddviz"

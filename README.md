@@ -16,14 +16,15 @@ Written in TypeScript with the Hono framework, deployed on Cloudflare Workers, a
     nub install
     ```
 
-2.  Add the required secrets to a `.dev.vars` file for local development:
+2.  Add the required secrets: copy `.dev.vars.example` to `.dev.vars` and fill in
+    the values.
 
     ```bash
-    REDDIT_CLIENT_ID=your_client_id
-    REDDIT_CLIENT_SECRET=your_client_secret
+    cp .dev.vars.example .dev.vars
     ```
 
-    For production, set the same keys as Worker secrets:
+    The two keys come from a Reddit app at https://www.reddit.com/prefs/apps (type:
+    "script"). For production, set the same keys as Worker secrets:
 
     ```bash
     wrangler secret put REDDIT_CLIENT_ID
@@ -139,6 +140,15 @@ so a fixed typo or a newly created subreddit is picked up quickly.
 
 - `nub run dev`: Start the development server.
 - `nub run deploy`: Deploy the application to Cloudflare Workers.
+- `nub run lint`: Lint with oxlint, including the anti-slop rules.
+- `nub run format`: Format with oxfmt.
+- `nub run format:check`: Verify formatting without writing anything.
+- `nub run typecheck`: Type-check with `tsc --noEmit`.
+- `nub run cf-typegen`: Regenerate `worker-configuration.d.ts` after changing
+  `wrangler.jsonc`.
+
+The deploy workflow runs `lint`, `format:check` and `typecheck` before deploying,
+so a failure there blocks the deploy.
 
 ## License
 
