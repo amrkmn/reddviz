@@ -60,7 +60,7 @@ Query parameters:
 | Param         | Description                                                                                          |
 | ------------- | ---------------------------------------------------------------------------------------------------- |
 | `c` / `count` | Number of posts to return (1-50). Returns an array instead of a single post.                         |
-| `t`           | Which top window to draw from: `day`, `week`, `month`, `year` or `all`. Defaults to a random window. |
+| `t` / `time`  | Which top window to draw from: `day`, `week`, `month`, `year` or `all`. Defaults to a random window. |
 | `nsfw`        | `true` (default, include), `false` (exclude) or `only` (NSFW posts only).                            |
 | `nonsfw`      | Shorthand for `nsfw=false`.                                                                          |
 
@@ -117,16 +117,16 @@ Errors return `"success": false` with a message:
 { "success": false, "message": "r/memes does not exist" }
 ```
 
-| Status | Cause                                                                                               |
-| ------ | --------------------------------------------------------------------------------------------------- |
-| 400    | Invalid `count`, `nsfw` or `t` value, `nsfw` contradicting `nonsfw`, or subreddit is private/locked |
-| 404    | Subreddit doesn't exist, has no image posts, or the NSFW filter matched no posts                    |
-| 500    | Unexpected error from Reddit                                                                        |
-| 503    | Reddit is unreachable, rate limiting us, or rejected our credentials                                |
+| Status | Cause                                                                                                      |
+| ------ | ---------------------------------------------------------------------------------------------------------- |
+| 400    | Invalid `count`, `nsfw`, `t` / `time` value, `nsfw` contradicting `nonsfw`, or subreddit is private/locked |
+| 404    | Subreddit doesn't exist, has no image posts, or the NSFW filter matched no posts                           |
+| 500    | Unexpected error from Reddit                                                                               |
+| 503    | Reddit is unreachable, rate limiting us, or rejected our credentials                                       |
 
 ### Caching
 
-Posts are cached per subreddit and `t` window under keys like
+Posts are cached per subreddit and time window under keys like
 `subreddit;memes;day`, for 4 hours (`SUB_EXPIRE`). Most requests then cost no
 Reddit call, and a request for one window never gets another window's posts.
 

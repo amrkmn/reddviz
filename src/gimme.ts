@@ -42,7 +42,7 @@ const gimme = new Hono<{ Bindings: CloudflareBindings }>();
  * Get random posts from a subreddit
  * @route GET /gimme/:subreddit?
  * @query c | count - Number of posts to return (max 50)
- * @query t - Only draw from this top window: day, week, month, year or all
+ * @query t | time - Only draw from this top window: day, week, month, year or all
  * @query nsfw - Include or exclude NSFW posts: true (default), false, or only
  * @query nonsfw - Shorthand for nsfw=false, kept for existing callers
  */
@@ -60,7 +60,8 @@ gimme.get("/:subreddit?", async (c) => {
         param ?? SUBREDDITS[Math.floor(Math.random() * SUBREDDITS.length)];
     // no ?t= has always meant "pick a window at random per request"; an explicit
     // window is one of the five, and anything else is a 400 rather than a guess
-    const time = parseTime(c.req.query("t")) ?? randomTime();
+    const time =
+        parseTime(c.req.query("t") ?? c.req.query("time")) ?? randomTime();
     const nsfw = parseNsfw(
         c.req.query("nsfw"),
         c.req.query("nonsfw") !== undefined,
