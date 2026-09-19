@@ -6,6 +6,8 @@ progress tracker. Source: full-repo review at commit `3bb1586`.
 ## How to use this file
 
 - Tick a box when the item is done **and** its `Done when` check passes.
+- An unticked item marked **Skipped** is a deliberate decision not to build it;
+  the reason is recorded in place of its `Done when` line.
 - Keep the summary table below in sync (manual counters — update on every tick).
 - One commit per item where practical; mention the item id in the commit body
   (e.g. `fix: validate subreddit param (1.3)`).
@@ -23,13 +25,13 @@ progress tracker. Source: full-repo review at commit `3bb1586`.
 
 ### Progress
 
-| Tier                 | Items  | Done   |
-| -------------------- | ------ | ------ |
-| 1 — Quick wins       | 8      | 8      |
-| 2 — Small fixes & CI | 5      | 5      |
-| 3 — Features         | 6      | 4      |
-| 4 — Decide first     | 3      | 0      |
-| **Total**            | **22** | **17** |
+| Tier                 | Items  | Done   | Skipped |
+| -------------------- | ------ | ------ | ------- |
+| 1 — Quick wins       | 8      | 8      | 0       |
+| 2 — Small fixes & CI | 5      | 5      | 0       |
+| 3 — Features         | 6      | 4      | 2       |
+| 4 — Decide first     | 3      | 0      | 0       |
+| **Total**            | **22** | **17** | **2**   |
 
 Base gates are green today (`nub run lint`, `nub run format:check`, and
 `./node_modules/.bin/tsc --noEmit` all exit 0), so nothing below has to work
@@ -211,11 +213,10 @@ Multi-file, but the approach is already clear.
       workerd: 200 `{"status":"ok","version":"1.0.0"}` and no outbound call in the
       log. `/health/` 301s to `/health`, same as `/gimme/` does today.
 
-- [ ] **3.4 — Add CORS if the JSON is consumed from a browser**
-      Only needed if a separate frontend fetches `/gimme`. `hono/cors` with an
-      explicit origin is enough; skip this item entirely if not.
-      Done when: a browser page on an allowed origin can read the response, and a
-      disallowed origin cannot.
+- [ ] **3.4 — Add CORS if the JSON is consumed from a browser**  
+      **Skipped — decided 2026-09-19:** nothing fetches this JSON from a web page;
+      the documented consumers are curl, scripts and bots, none of which need CORS
+      headers. Revisit if a browser frontend is ever built.
 
 - [x] **3.5 — Support `?nsfw` alongside the existing `nonsfw`**
       `src/gimme.ts:33` treats `nonsfw` as a presence flag: absence means NSFW
@@ -240,12 +241,17 @@ Multi-file, but the approach is already clear.
       cases, 5 rejected forms, 3 404s, and 36 single-post draws with zero wrong-side
       results.
 
-- [ ] **3.6 — Rate-limit `/gimme`**
-      Nothing bounds request volume; each request can cost a reddit fetch plus a KV
-      write. The Workers rate-limiting binding fits. Confirm the current wrangler
-      config key against the docs before writing it.
-      Done when: bursts past the configured limit return 429 without reaching
-      reddit or KV.
+- [ ] **3.6 — Rate-limit `/gimme`**  
+      **Skipped — decided 2026-09-19:** the endpoint has no actor to key a limit on
+      — it is public and unauthenticated. Cloudflare's own guidance for the binding
+      rejects IP addresses as keys (shared and NAT IPs get limited together) and
+      recommends API keys, user IDs or routes; a route-wide bucket would let one
+      client exhaust the shared allowance and 429 everyone else in that Cloudflare
+      location. The underlying cost is also already bounded: 3.1 stops repeated
+      reddit calls for empty subreddits and 3.2 keeps hits off reddit near the TTL,
+      so `/gimme` costs one listing per subreddit per 4 hours in the common case.
+      Revisit if the Worker starts absorbing real abuse — the binding is ready to
+      configure (`ratelimits` in `wrangler.jsonc`, `period` must be 10 or 60).
 
 ---
 
