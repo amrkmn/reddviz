@@ -27,9 +27,9 @@ progress tracker. Source: full-repo review at commit `3bb1586`.
 | -------------------- | ------ | ------ |
 | 1 — Quick wins       | 8      | 8      |
 | 2 — Small fixes & CI | 5      | 5      |
-| 3 — Features         | 6      | 1      |
+| 3 — Features         | 6      | 2      |
 | 4 — Decide first     | 3      | 0      |
-| **Total**            | **22** | **14** |
+| **Total**            | **22** | **15** |
 
 Base gates are green today (`nub run lint`, `nub run format:check`, and
 `./node_modules/.bin/tsc --noEmit` all exit 0), so nothing below has to work
@@ -192,22 +192,28 @@ Multi-file, but the approach is already clear.
       Done when: a browser page on an allowed origin can read the response, and a
       disallowed origin cannot.
 
-- [ ] **3.5 — Support `?nsfw` alongside the existing `nonsfw`**
+- [x] **3.5 — Support `?nsfw` alongside the existing `nonsfw`**
       `src/gimme.ts:33` treats `nonsfw` as a presence flag: absence means NSFW
-      _included_ and there is no way to ask for NSFW-only. Add `?nsfw` as an explicit
-      three-state param — `false` (exclude, same as `nonsfw`), `true` (include,
-      today's default) and `only` (NSFW only, the new capability) — leaving `nonsfw`
-      working unchanged for existing callers. A bare `?nsfw`, an empty or unknown
-      value, or a contradictory pair (`nonsfw` together with `true`/`only`) all 400
-      with the accepted values in the message, rather than silently defaulting or
-      letting one param quietly win — the same stand 2.2 took on counts. Needs the
-      mirror of the existing `nonsfw` 404 at `src/gimme.ts:47-51` for "no NSFW posts
-      here".
-      Confirm D3vd's `nsfw` value format before locking this in, since the README
-      credits that API and its param is the compatibility reference.
+      _included_ and there is no way to ask for NSFW-only. Added `?nsfw` as an
+      explicit three-state param — `false` (exclude, same as `nonsfw`), `true`
+      (include, today's default) and `only` (NSFW only, the new capability) —
+      leaving `nonsfw` working unchanged for existing callers. A bare `?nsfw`, an
+      empty or unknown value, or a contradictory pair (`nonsfw` together with
+      `true`/`only`) all 400 with the accepted values in the message, rather than
+      silently defaulting or letting one param quietly win — the same stand 2.2 took
+      on counts. Values are case-folded (`?nsfw=ONLY` works). The 404 for an
+      all-NSFW pool now says "use nsfw=true" instead of naming `nonsfw`, and a new
+      "no nsfw posts found in r/x" covers `nsfw=only`.
+      **Compatibility question settled:** D3vd's Meme_Api takes no query parameters
+      at all for `/gimme/{subreddit}[/{count}]` — `api/gimme/one_post_from_sub.go`
+      and `n_random_posts_from_sub.go` read only path params, and NSFW is reported
+      in the response, never filtered on. There is no `nsfw` format to match, so
+      these semantics are reddviz's own.
       Done when: all three `nsfw` states are reachable and documented in the README
       param table, `nonsfw` behaves exactly as today, and every rejected form returns
-      400 naming the accepted values.
+      400 naming the accepted values. Verified against the real bundle: 7 filter
+      cases, 5 rejected forms, 3 404s, and 36 single-post draws with zero wrong-side
+      results.
 
 - [ ] **3.6 — Rate-limit `/gimme`**
       Nothing bounds request volume; each request can cost a reddit fetch plus a KV

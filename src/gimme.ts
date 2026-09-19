@@ -9,6 +9,9 @@ const MAX_COUNT = 50;
 const IMAGE_EXT = /\.(jpe?g|png|gif)$/i;
 // 2 characters minimum: 1-char names can't exist, but r/de and r/me are real
 const SUBREDDIT_NAME = /^[a-z0-9_]{2,21}$/;
+const NSFW_VALUES = "true, false or only";
+
+type NsfwFilter = "include" | "exclude" | "only";
 
 const gimme = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -16,7 +19,8 @@ const gimme = new Hono<{ Bindings: CloudflareBindings }>();
  * Get random posts from a subreddit
  * @route GET /gimme/:subreddit?
  * @query c | count - Number of posts to return (max 50)
- * @query nonsfw - Filter out NSFW content
+ * @query nsfw - Include or exclude NSFW posts: true (default), false, or only
+ * @query nonsfw - Shorthand for nsfw=false, kept for existing callers
  */
 gimme.get("/:subreddit?", async (c) => {
     const param = c.req.param("subreddit")?.toLowerCase();
@@ -30,7 +34,10 @@ gimme.get("/:subreddit?", async (c) => {
 
     const subreddit =
         param ?? SUBREDDITS[Math.floor(Math.random() * SUBREDDITS.length)];
-    const nonsfw = c.req.query("nonsfw") !== undefined;
+    const nsfw = parseNsfw(
+        c.req.query("nsfw"),
+        c.req.query("nonsfw") !== undefined,
+    );
     const count = parseCount(c.req.query("c") ?? c.req.query("count"));
 
     const posts = await getCachedPosts(c, subreddit);
@@ -43,11 +50,13 @@ gimme.get("/:subreddit?", async (c) => {
         );
     }
 
-    const visible = nonsfw ? posts.filter((p) => !p.nsfw) : posts;
-    if (nonsfw && visible.length === 0)
+    const visible = filterNsfw(posts, nsfw);
+    if (visible.length === 0)
         throw new HTTPError(
             404,
-            `all posts in r/${subreddit} are nsfw, remove the nonsfw filter to see them`,
+            nsfw === "only"
+                ? `no nsfw posts found in r/${subreddit}`
+                : `all posts in r/${subreddit} are nsfw, use nsfw=true to see them`,
         );
 
     if (count !== null) {
@@ -69,6 +78,34 @@ function parseCount(raw: string | undefined): number | null {
             `invalid count value "${raw}": must be a whole number between 1 and ${MAX_COUNT}`,
         );
     return Math.min(Number(raw), MAX_COUNT);
+}
+
+// absent means include, and nonsfw is the older shorthand for exclude
+function parseNsfw(raw: string | undefined, nonsfw: boolean): NsfwFilter {
+    if (raw === undefined) return nonsfw ? "exclude" : "include";
+    const value = raw.toLowerCase();
+    // a bare ?nsfw lands here too: an empty value names no state, and guessing one
+    // is how a caller silently gets the opposite of what they asked for
+    if (value !== "true" && value !== "false" && value !== "only")
+        throw new HTTPError(
+            400,
+            `invalid nsfw value "${raw}": must be ${NSFW_VALUES}`,
+        );
+    if (nonsfw && value !== "false")
+        throw new HTTPError(
+            400,
+            `nsfw=${raw} contradicts nonsfw: nonsfw hides NSFW posts, use one or the other`,
+        );
+    return value === "false"
+        ? "exclude"
+        : value === "true"
+          ? "include"
+          : "only";
+}
+
+function filterNsfw(posts: Post[], filter: NsfwFilter): Post[] {
+    if (filter === "include") return posts;
+    return posts.filter((p) => (filter === "only" ? p.nsfw : !p.nsfw));
 }
 
 // returns cached image posts for a subreddit, fetching and caching them on a miss

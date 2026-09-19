@@ -78,7 +78,8 @@ Query parameters:
 | Param         | Description                                                                  |
 | ------------- | ---------------------------------------------------------------------------- |
 | `c` / `count` | Number of posts to return (1-50). Returns an array instead of a single post. |
-| `nonsfw`      | If present, filters out NSFW posts.                                          |
+| `nsfw`        | `true` (default, include), `false` (exclude) or `only` (NSFW posts only).    |
+| `nonsfw`      | Shorthand for `nsfw=false`.                                                  |
 
 A request for a single post:
 
@@ -127,12 +128,12 @@ Errors return `"success": false` with a message:
 { "success": false, "message": "r/memes does not exist" }
 ```
 
-| Status | Cause                                                                              |
-| ------ | ---------------------------------------------------------------------------------- |
-| 400    | Invalid `count` value, or subreddit is private/locked                              |
-| 404    | Subreddit doesn't exist, has no image posts, or all posts are NSFW (with `nonsfw`) |
-| 500    | Unexpected error from Reddit                                                       |
-| 503    | Reddit is unreachable, rate limiting us, or rejected our credentials               |
+| Status | Cause                                                                                          |
+| ------ | ---------------------------------------------------------------------------------------------- |
+| 400    | Invalid `count` or `nsfw` value, `nsfw` contradicting `nonsfw`, or subreddit is private/locked |
+| 404    | Subreddit doesn't exist, has no image posts, or the NSFW filter matched no posts               |
+| 500    | Unexpected error from Reddit                                                                   |
+| 503    | Reddit is unreachable, rate limiting us, or rejected our credentials                           |
 
 ## Available scripts
 
