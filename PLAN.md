@@ -25,11 +25,11 @@ progress tracker. Source: full-repo review at commit `3bb1586`.
 
 | Tier                 | Items  | Done  |
 | -------------------- | ------ | ----- |
-| 1 — Quick wins       | 8      | 7     |
+| 1 — Quick wins       | 8      | 8     |
 | 2 — Small fixes & CI | 5      | 0     |
 | 3 — Features         | 6      | 0     |
 | 4 — Decide first     | 3      | 0     |
-| **Total**            | **22** | **7** |
+| **Total**            | **22** | **8** |
 
 Base gates are green today (`nub run lint`, `nub run format:check`, and
 `./node_modules/.bin/tsc --noEmit` all exit 0), so nothing below has to work
@@ -92,7 +92,7 @@ No decisions required. Each is a single file.
       returns 200. Verified locally that both outbound calls carry the new UA; the
       live reddit check is deploy-time, since this environment is 403'd by reddit.
 
-- [ ] **1.8 — Early-exit `pickRandom`**
+- [x] **1.8 — Early-exit `pickRandom`**
       `src/gimme.ts:94-101` shuffles all 100 items to return ≤50. Stop the loop at
       `n`. Pure refactor, no behavior change.
       Done when: output distribution is unchanged and the loop runs at most `n`

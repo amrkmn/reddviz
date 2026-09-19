@@ -104,13 +104,15 @@ function hasImage(post: Post): boolean {
     }
 }
 
+// partial Fisher-Yates: only the first n positions are ever touched
 function pickRandom<T>(arr: T[], n: number): T[] {
     const pool = arr.slice();
-    for (let i = pool.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
+    const size = Math.min(n, pool.length);
+    for (let i = 0; i < size; i++) {
+        const j = i + Math.floor(Math.random() * (pool.length - i));
         [pool[i], pool[j]] = [pool[j], pool[i]];
     }
-    return pool.slice(0, n);
+    return pool.slice(0, size);
 }
 
 export { gimme };
