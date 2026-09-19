@@ -45,8 +45,7 @@ Base URL: your deployed Workers URL (or `http://localhost:8787` in dev).
 
 ### `GET /health`
 
-Returns `200` with the deployed version. Makes no Reddit call, so an uptime
-check can tell a broken Worker apart from a broken Reddit.
+Returns `200` with the deployed version. It makes no Reddit call, so an uptime check can still pass while Reddit is down.
 
 ```json
 { "status": "ok", "version": "1.0.0" }
@@ -58,12 +57,12 @@ Returns a random post with an image from a subreddit. If `subreddit` is omitted,
 
 Query parameters:
 
-| Param         | Description                                                                                           |
-| ------------- | ----------------------------------------------------------------------------------------------------- |
-| `c` / `count` | Number of posts to return (1-50). Returns an array instead of a single post.                          |
-| `t`           | Only draw from this top window: `day`, `week`, `month`, `year` or `all`. Defaults to a random window. |
-| `nsfw`        | `true` (default, include), `false` (exclude) or `only` (NSFW posts only).                             |
-| `nonsfw`      | Shorthand for `nsfw=false`.                                                                           |
+| Param         | Description                                                                                          |
+| ------------- | ---------------------------------------------------------------------------------------------------- |
+| `c` / `count` | Number of posts to return (1-50). Returns an array instead of a single post.                         |
+| `t`           | Which top window to draw from: `day`, `week`, `month`, `year` or `all`. Defaults to a random window. |
+| `nsfw`        | `true` (default, include), `false` (exclude) or `only` (NSFW posts only).                            |
+| `nonsfw`      | Shorthand for `nsfw=false`.                                                                          |
 
 A request for a single post:
 
@@ -127,14 +126,16 @@ Errors return `"success": false` with a message:
 
 ### Caching
 
-Posts are cached per subreddit and `t` window for 4 hours (`SUB_EXPIRE`), under keys
-like `subreddit;memes;day`, so most requests cost no Reddit call and one window's
-posts are never served for another. An entry in its final 15 minutes
-(`SUB_REFRESH_WINDOW`) is served from cache while it is refreshed in the
-background, so a cache hit near the TTL never waits on Reddit. A subreddit and
-window that come back with nothing usable — missing, private, or with no image
-posts — are remembered for 60 seconds only (`MISS_EXPIRE`) under `miss;memes;day`,
-so a fixed typo or a newly created subreddit is picked up quickly.
+Posts are cached per subreddit and `t` window under keys like
+`subreddit;memes;day`, for 4 hours (`SUB_EXPIRE`). Most requests then cost no
+Reddit call, and a request for one window never gets another window's posts.
+
+An entry in its last 15 minutes (`SUB_REFRESH_WINDOW`) is served from the cache
+while it is refreshed in the background, so the request does not wait for Reddit.
+
+A subreddit and window with nothing usable (missing, private, or no image posts)
+are remembered for 60 seconds only (`MISS_EXPIRE`) under `miss;memes;day`. A fixed
+typo or a newly created subreddit shows up within a minute.
 
 ## Available scripts
 
@@ -147,8 +148,8 @@ so a fixed typo or a newly created subreddit is picked up quickly.
 - `nub run cf-typegen`: Regenerate `worker-configuration.d.ts` after changing
   `wrangler.jsonc`.
 
-The deploy workflow runs `lint`, `format:check` and `typecheck` before deploying,
-so a failure there blocks the deploy.
+The deploy workflow runs `lint`, `format:check` and `typecheck` before deploying.
+If any of them fails, the deploy stops.
 
 ## License
 

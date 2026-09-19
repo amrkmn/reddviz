@@ -146,7 +146,7 @@ home.get("/", (c) =>
                         <tr>
                             <td><code>nonsfw</code></td>
                             <td>Shorthand for <code>nsfw=false</code></td>
-                            <td>—</td>
+                            <td>none</td>
                         </tr>
                     </table>
 
@@ -188,7 +188,7 @@ GET /gimme/memes?c=5&amp;nsfw=false</code></pre>
                             <td>503</td>
                             <td>
                                 Reddit unreachable, rate limiting us, or
-                                rejecting our credentials
+                                rejected our credentials
                             </td>
                         </tr>
                     </table>
