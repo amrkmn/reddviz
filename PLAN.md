@@ -7,7 +7,8 @@ progress tracker. Source: full-repo review at commit `3bb1586`.
 
 - Tick a box when the item is done **and** its `Done when` check passes.
 - An unticked item marked **Skipped** is a deliberate decision not to build it;
-  the reason is recorded in place of its `Done when` line.
+  the reason is recorded in place of its `Done when` line. **Not planned** marks
+  work that was dropped before it was ever scoped in.
 - Keep the summary table below in sync (manual counters — update on every tick).
 - One commit per item where practical; mention the item id in the commit body
   (e.g. `fix: validate subreddit param (1.3)`).
@@ -30,8 +31,12 @@ progress tracker. Source: full-repo review at commit `3bb1586`.
 | 1 — Quick wins       | 8      | 8      | 0       |
 | 2 — Small fixes & CI | 5      | 5      | 0       |
 | 3 — Features         | 6      | 4      | 2       |
-| 4 — Decide first     | 3      | 0      | 0       |
-| **Total**            | **22** | **17** | **2**   |
+| 4 — Decide first     | 3      | 0      | 3       |
+| **Total**            | **22** | **17** | **5**   |
+
+The plan is finished at 17 of 22. Every Tier 4 item was dropped by owner decision
+on 2026-09-19 — none of it is pending work; the questions are kept below only in
+case that changes.
 
 Base gates are green today (`nub run lint`, `nub run format:check`, and
 `./node_modules/.bin/tsc --noEmit` all exit 0), so nothing below has to work
@@ -255,12 +260,14 @@ Multi-file, but the approach is already clear.
 
 ---
 
-## Tier 4 — Decide first
+## Tier 4 — Not planned
 
-Do not write code for these until the question is answered. Decisions belong in
-this file (or the README) so the next session does not relitigate them.
+**Dropped 2026-09-19: no Tier 4 item will be built.** The questions are kept as
+written so the reasoning is not lost, but none of them are open work — do not
+start one without the owner asking for it.
 
-- [ ] **4.1 — Test harness, then first tests**
+- [ ] **4.1 — Test harness, then first tests**  
+      **Not planned — decided 2026-09-19.**
       Nothing in the repo is tested. `parseCount`, `pickRandom`, `hasImage`,
       `toPost`, `decode` and the routes are all untested. **Question:** vitest with
       `@cloudflare/vitest-pool-workers` (real KV, `app.request()`, no network) versus
@@ -268,23 +275,20 @@ this file (or the README) so the next session does not relitigate them.
       `no-module-mocking` (`tools/oxlint/anti-slop/rules/no-module-mocking.ts`)
       limits how `fetch` and KV can be faked — `getPosts(c, ...)` already takes
       context, so that is the natural seam.
-      Done when: the decision is recorded here, a `test` script exists, and the
-      pure helpers are covered.
 
-- [ ] **4.2 — Response envelope: keep or unify?**
+- [ ] **4.2 — Response envelope: keep or unify?**  
+      **Not planned — decided 2026-09-19.** Keeping the three shapes as they are.
       Three shapes today: bare post object for a single post, `{count, posts}` for
       count mode, `{success: false, message}` for errors. **Question:** keep as-is,
       or move to `{success: true, data}` for success and mirror errors — matching the
       D3vd API credited in the README. Breaking change; cheapest now, while there
       are no clients.
-      Done when: the decision is recorded and, if changed, README + homepage +
-      handlers agree.
 
-- [ ] **4.3 — Observability: turn traces on?**
+- [ ] **4.3 — Observability: turn traces on?**  
+      **Not planned — decided 2026-09-19.** `traces.enabled` stays `false`.
       `wrangler.jsonc` has `traces.enabled: false` while logs are enabled.
       **Question:** is it worth the ingest cost to answer "reddit or KV dominates
       latency?" — or is timing the two calls manually once enough?
-      Done when: the decision is recorded, with the sample rate if enabled.
 
 ---
 
@@ -307,5 +311,8 @@ this file (or the README) so the next session does not relitigate them.
 - 1.1 must land before 2.3 references `nub run typecheck`.
 - 3.1 and 3.2 both touch the cache read/write path in `src/gimme.ts:64-84`;
   doing them together avoids editing the same block twice.
-- 4.1 is the only item that needs real design work. If only one thing gets a
-  dedicated design pass, it should be that one.
+- 4.1 was the one item that needed real design work; it was dropped, so no design
+  pass is owed. The /tmp harnesses from 2026-09-19 are gone with the session —
+  reproducing one means: `wrangler deploy --dry-run --outdir /tmp/x`, import the
+  bundle, stub `globalThis.fetch`, then call `app.request(path, {}, env, ctx)`
+  (the `ctx` argument is required since 3.2 uses `executionCtx.waitUntil`).
