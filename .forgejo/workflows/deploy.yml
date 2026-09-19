@@ -46,7 +46,10 @@ jobs:
               with:
                   nub-version: "0.9.2"
                   cache: true
-                  cache-dependency-path: nub.lock
+                  # the key ignores the Node pin unless package.json is hashed too
+                  cache-dependency-path: |
+                      nub.lock
+                      package.json
 
             - name: Install dependencies
               run: nub ci
