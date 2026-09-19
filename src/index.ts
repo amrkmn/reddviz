@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
 import { trimTrailingSlash } from "hono/trailing-slash";
+import { version } from "../package.json";
 import { HTTPError } from "./error";
 import { gimme } from "./gimme";
 import { home } from "./home";
@@ -33,5 +34,9 @@ app.onError((err, c) => {
 
 app.route("/", home);
 app.route("/gimme", gimme);
+
+// deliberately makes no reddit call: an uptime check should be able to tell a
+// broken worker apart from a broken reddit
+app.get("/health", (c) => c.json({ status: "ok", version }));
 
 export default app;

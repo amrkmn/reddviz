@@ -27,9 +27,9 @@ progress tracker. Source: full-repo review at commit `3bb1586`.
 | -------------------- | ------ | ------ |
 | 1 — Quick wins       | 8      | 8      |
 | 2 — Small fixes & CI | 5      | 5      |
-| 3 — Features         | 6      | 0      |
+| 3 — Features         | 6      | 1      |
 | 4 — Decide first     | 3      | 0      |
-| **Total**            | **22** | **13** |
+| **Total**            | **22** | **14** |
 
 Base gates are green today (`nub run lint`, `nub run format:check`, and
 `./node_modules/.bin/tsc --noEmit` all exit 0), so nothing below has to work
@@ -177,10 +177,14 @@ Multi-file, but the approach is already clear.
       Done when: a request against a near-expiry entry returns immediately and a
       fresh value is present afterwards.
 
-- [ ] **3.3 — Add a `/health` endpoint**
-      Separates "worker down" from "reddit down" for uptime checks. Keep it
-      dependency-free (no reddit call) unless you want a deeper probe.
-      Done when: `GET /health` returns 200 with a small JSON body.
+- [x] **3.3 — Add a `/health` endpoint**
+      Separates "worker down" from "reddit down" for uptime checks. Kept
+      dependency-free: `src/index.ts` returns `{ status, version }` and touches no
+      reddit or KV binding, so a 200 means the Worker itself is serving. `version`
+      comes from `package.json`, so the response also says which build is live.
+      Done when: `GET /health` returns 200 with a small JSON body. Verified against
+      workerd: 200 `{"status":"ok","version":"1.0.0"}` and no outbound call in the
+      log. `/health/` 301s to `/health`, same as `/gimme/` does today.
 
 - [ ] **3.4 — Add CORS if the JSON is consumed from a browser**
       Only needed if a separate frontend fetches `/gimme`. `hono/cors` with an

@@ -60,6 +60,15 @@ The deploy workflow only deploys production; staging deploys are manual.
 
 Base URL: your deployed Workers URL (or `http://localhost:8787` in dev).
 
+### `GET /health`
+
+Returns `200` with the deployed version. Makes no Reddit call, so an uptime
+check can tell a broken Worker apart from a broken Reddit.
+
+```json
+{ "status": "ok", "version": "1.0.0" }
+```
+
 ### `GET /gimme/:subreddit?`
 
 Returns a random post with an image from a subreddit. If `subreddit` is omitted, a random default subreddit is used.
