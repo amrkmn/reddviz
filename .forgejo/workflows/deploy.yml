@@ -10,6 +10,7 @@ on:
             - "package.json"
             - "nub.lock"
             - "worker-configuration.d.ts"
+            - ".forgejo/workflows/**"
     workflow_dispatch:
 
 concurrency:
