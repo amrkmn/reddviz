@@ -7,6 +7,8 @@ import type { Post } from "./types";
 
 const MAX_COUNT = 50;
 const IMAGE_EXT = /\.(jpe?g|png|gif)$/i;
+// 2 characters minimum: 1-char names can't exist, but r/de and r/me are real
+const SUBREDDIT_NAME = /^[a-z0-9_]{2,21}$/;
 
 const gimme = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -18,6 +20,14 @@ const gimme = new Hono<{ Bindings: CloudflareBindings }>();
  */
 gimme.get("/:subreddit?", async (c) => {
     const param = c.req.param("subreddit")?.toLowerCase();
+    // unvalidated, an encoded slash escapes the r/ prefix and picks an arbitrary
+    // path on oauth.reddit.com while carrying the app's bearer token
+    if (param !== undefined && !SUBREDDIT_NAME.test(param))
+        throw new HTTPError(
+            400,
+            `invalid subreddit name "${param}": only letters, numbers and underscores (2-21 characters)`,
+        );
+
     const subreddit =
         param ?? SUBREDDITS[Math.floor(Math.random() * SUBREDDITS.length)];
     const nonsfw = c.req.query("nonsfw") !== undefined;

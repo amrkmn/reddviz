@@ -25,11 +25,11 @@ progress tracker. Source: full-repo review at commit `3bb1586`.
 
 | Tier | Items | Done |
 | ---- | ----- | ---- |
-| 1 — Quick wins | 8 | 2 |
+| 1 — Quick wins | 8 | 3 |
 | 2 — Small fixes & CI | 5 | 0 |
 | 3 — Features | 6 | 0 |
 | 4 — Decide first | 3 | 0 |
-| **Total** | **22** | **2** |
+| **Total** | **22** | **3** |
 
 Base gates are green today (`nub run lint`, `nub run format:check`, and
 `./node_modules/.bin/tsc --noEmit` all exit 0), so nothing below has to work
@@ -53,7 +53,7 @@ No decisions required. Each is a single file.
   Done when: a thrown non-`HTTPError` still returns the same JSON body and a log
   line is visible in `wrangler dev`.
 
-- [ ] **1.3 — Validate the `:subreddit` param**
+- [x] **1.3 — Validate the `:subreddit` param**
   `src/gimme.ts:20`, interpolated at `src/reddit.ts:67`. Hono decodes `%2F`, and
   `new URL()` collapses `..`, so `GET /gimme/..%2F..%2Fapi%2Fv1%2Fme` sends an
   authenticated GET to `https://oauth.reddit.com/api/v1/me/top` (reproduced
