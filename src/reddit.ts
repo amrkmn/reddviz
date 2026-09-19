@@ -1,5 +1,6 @@
 import type { Context } from "hono";
-import { ACCESS_TOKEN_KEY, FETCH_HEADERS, TIMES } from "./constants";
+import { ACCESS_TOKEN_KEY, FETCH_HEADERS } from "./constants";
+import type { TimeWindow } from "./constants";
 import { HTTPError } from "./error";
 import type { Post, RedditListing, RedditPostData } from "./types";
 
@@ -83,8 +84,8 @@ function apiError(status: number, subreddit: string): HTTPError {
 export async function getPosts(
     c: Context<{ Bindings: CloudflareBindings }>,
     subreddit: string,
+    time: TimeWindow,
 ): Promise<Post[]> {
-    const time = TIMES[Math.floor(Math.random() * TIMES.length)];
     const url = `https://oauth.reddit.com/r/${subreddit}/top?limit=100&t=${time}`;
 
     let token =

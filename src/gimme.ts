@@ -3,12 +3,14 @@ import { Hono } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import {
     SUBREDDITS,
+    TIMES,
     SUB_EXPIRE,
     SUB_PREFIX_KEY,
     MISS_EXPIRE,
     MISS_PREFIX_KEY,
     SUB_REFRESH_WINDOW,
 } from "./constants";
+import type { TimeWindow } from "./constants";
 import { HTTPError } from "./error";
 import { getPosts } from "./reddit";
 import type { Post } from "./types";
@@ -40,6 +42,7 @@ const gimme = new Hono<{ Bindings: CloudflareBindings }>();
  * Get random posts from a subreddit
  * @route GET /gimme/:subreddit?
  * @query c | count - Number of posts to return (max 50)
+ * @query t - Only draw from this top window: day, week, month, year or all
  * @query nsfw - Include or exclude NSFW posts: true (default), false, or only
  * @query nonsfw - Shorthand for nsfw=false, kept for existing callers
  */
@@ -55,13 +58,16 @@ gimme.get("/:subreddit?", async (c) => {
 
     const subreddit =
         param ?? SUBREDDITS[Math.floor(Math.random() * SUBREDDITS.length)];
+    // no ?t= has always meant "pick a window at random per request"; an explicit
+    // window is one of the five, and anything else is a 400 rather than a guess
+    const time = parseTime(c.req.query("t")) ?? randomTime();
     const nsfw = parseNsfw(
         c.req.query("nsfw"),
         c.req.query("nonsfw") !== undefined,
     );
     const count = parseCount(c.req.query("c") ?? c.req.query("count"));
 
-    const posts = await getCachedPosts(c, subreddit);
+    const posts = await getCachedPosts(c, subreddit, time);
     if (posts.length === 0) {
         throw new HTTPError(
             404,
@@ -129,27 +135,58 @@ function filterNsfw(posts: Post[], filter: NsfwFilter): Post[] {
     return posts.filter((p) => (filter === "only" ? p.nsfw : !p.nsfw));
 }
 
+// absent means the caller has no preference, so the window is drawn at random as
+// it always was; an unknown or empty one is rejected rather than silently swapped
+// for a different pool than the caller asked for
+function parseTime(raw: string | undefined): TimeWindow | undefined {
+    if (raw === undefined) return undefined;
+    const value = raw.toLowerCase();
+    switch (value) {
+        case "day":
+        case "week":
+        case "month":
+        case "year":
+        case "all":
+            return value;
+        default:
+            throw new HTTPError(
+                400,
+                `invalid time value "${raw}": must be one of ${TIMES.join(", ")}`,
+            );
+    }
+}
+
+const randomTime = () => TIMES[Math.floor(Math.random() * TIMES.length)];
+
+// the window is part of both keys: a 404 for an empty window must not be replayed
+// for a different one, and one window's posts must not be served for another
+const subredditKey = (subreddit: string, time: TimeWindow) =>
+    `${SUB_PREFIX_KEY}${subreddit};${time}`;
+const missKey = (subreddit: string, time: TimeWindow) =>
+    `${MISS_PREFIX_KEY}${subreddit};${time}`;
+
 // returns cached image posts for a subreddit, fetching and caching them on a miss
 async function getCachedPosts(
     c: Context<{ Bindings: CloudflareBindings }>,
     subreddit: string,
+    time: TimeWindow,
 ): Promise<Post[]> {
     const kv = c.get("kv");
     const { value: cached, metadata } = await kv.getWithMetadata<
         Post[],
         CacheMeta
-    >(`${SUB_PREFIX_KEY}${subreddit}`, { type: "json" });
+    >(subredditKey(subreddit, time), { type: "json" });
     // ponytail: Array.isArray guards against stale/garbage cache entries (a non-array parses to a string; indexing it yields single letters)
     if (Array.isArray(cached) && cached.length > 0) {
         // too close to expiry to be worth a round trip for this caller: hand back
         // the stale copy and let the refresh land for whoever asks next
         if (isNearExpiry(metadata?.storedAt))
-            c.executionCtx.waitUntil(refreshPosts(c, subreddit));
+            c.executionCtx.waitUntil(refreshPosts(c, subreddit, time));
         return cached;
     }
 
-    const missKey = `${MISS_PREFIX_KEY}${subreddit}`;
-    const miss = await kv.get<CacheMiss>(missKey, { type: "json" });
+    const marker = missKey(subreddit, time);
+    const miss = await kv.get<CacheMiss>(marker, { type: "json" });
     if (miss) {
         // a marker either replays a deterministic failure or just means "nothing
         // usable"; anything else must fall through to the fetch rather than become
@@ -166,14 +203,14 @@ async function getCachedPosts(
 
     let images: Post[];
     try {
-        images = (await getPosts(c, subreddit)).filter(hasImage);
+        images = (await getPosts(c, subreddit, time)).filter(hasImage);
     } catch (err) {
         // a 4xx is reddit answering deterministically (no such subreddit, private,
         // locked) so it is worth remembering for a minute. A 5xx or a rate limit
         // is transient: caching it would only postpone recovery.
         if (err instanceof HTTPError && err.code < 500)
             await kv.put(
-                missKey,
+                marker,
                 JSON.stringify({ status: err.code, message: err.message }),
                 { expirationTtl: MISS_EXPIRE },
             );
@@ -183,13 +220,13 @@ async function getCachedPosts(
     if (images.length === 0) {
         // only the short-lived marker is written here, so a bad reddit response
         // still can't occupy the 4h key
-        await kv.put(missKey, JSON.stringify({}), {
+        await kv.put(marker, JSON.stringify({}), {
             expirationTtl: MISS_EXPIRE,
         });
         return images;
     }
 
-    await putPosts(c, subreddit, images);
+    await putPosts(c, subreddit, time, images);
     return images;
 }
 
@@ -203,11 +240,12 @@ function isNearExpiry(storedAt: number | undefined): boolean {
 async function putPosts(
     c: Context<{ Bindings: CloudflareBindings }>,
     subreddit: string,
+    time: TimeWindow,
     images: Post[],
 ): Promise<void> {
     await c
         .get("kv")
-        .put(`${SUB_PREFIX_KEY}${subreddit}`, JSON.stringify(images), {
+        .put(subredditKey(subreddit, time), JSON.stringify(images), {
             expirationTtl: SUB_EXPIRE,
             metadata: { storedAt: Date.now() },
         });
@@ -218,13 +256,14 @@ async function putPosts(
 async function refreshPosts(
     c: Context<{ Bindings: CloudflareBindings }>,
     subreddit: string,
+    time: TimeWindow,
 ): Promise<void> {
     try {
-        const images = (await getPosts(c, subreddit)).filter(hasImage);
+        const images = (await getPosts(c, subreddit, time)).filter(hasImage);
         // an empty refresh leaves the stale entry to expire on its own instead of
         // dropping a subreddit that still has servable posts
         if (images.length === 0) return;
-        await putPosts(c, subreddit, images);
+        await putPosts(c, subreddit, time, images);
     } catch (err) {
         console.error(err);
     }

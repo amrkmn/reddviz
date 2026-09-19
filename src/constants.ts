@@ -12,7 +12,10 @@ export const SUBREDDITS = [
     "animemes",
 ];
 
-export const TIMES = ["day", "week", "month", "year", "all"];
+// the window is a client-visible parameter and part of the cache key, so the
+// values are a closed set rather than free text
+export type TimeWindow = "day" | "week" | "month" | "year" | "all";
+export const TIMES: TimeWindow[] = ["day", "week", "month", "year", "all"];
 export const SUB_EXPIRE = 14400;
 export const SUB_PREFIX_KEY = "subreddit;";
 // an empty result is remembered only briefly: long enough to stop a typo or a

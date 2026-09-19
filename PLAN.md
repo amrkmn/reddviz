@@ -292,12 +292,20 @@ start one without the owner asking for it.
 
 ---
 
+## Done after the plan closed
+
+- **`?t=<window>` and the window in the cache key** (2026-09-19). The deferred note
+  that used to sit below flagged that exposing `?t=` without adding it to the key
+  would serve one window's posts for another; it is gone because the fix is in.
+  Keys are now `subreddit;<subreddit>;<window>` and `miss;<subreddit>;<window>`;
+  omitting `?t=` still draws a window at random per request, so default output is
+  unchanged, and the TTL stays flat at 4h. Old window-less keys are simply never
+  read again and expire on their own.
+
+---
+
 ## Deferred / do not do
 
-- **`TIMES` is not in the KV cache key** (`src/reddit.ts:66`, `src/gimme.ts:69`).
-  Harmless today because `t` is server-chosen and invisible to clients. Becomes a
-  bug the moment `?t=` is exposed — add both the param and the key component in
-  the same change.
 - **`compatibility_date` / dependency bumps.** Covered by Dependabot-style
   commits already in history; not tracked here.
 - **Rewriting the vendored anti-slop plugin.** Untouched by this plan.
