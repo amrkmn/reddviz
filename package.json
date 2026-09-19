@@ -13,6 +13,7 @@
         "lint": "oxlint",
         "format": "oxfmt",
         "format:check": "oxfmt --check",
+        "typecheck": "tsc --noEmit",
         "cf-typegen": "wrangler types --env-interface CloudflareBindings"
     },
     "dependencies": {
