@@ -16,7 +16,14 @@ Written in TypeScript with the Hono framework, deployed on Cloudflare Workers, a
     nub install
     ```
 
-2.  Set the required secrets with `wrangler secret put`:
+2.  Add the required secrets to a `.dev.vars` file for local development:
+
+    ```bash
+    REDDIT_CLIENT_ID=your_client_id
+    REDDIT_CLIENT_SECRET=your_client_secret
+    ```
+
+    For production, set the same keys as Worker secrets:
 
     ```bash
     wrangler secret put REDDIT_CLIENT_ID
