@@ -25,11 +25,11 @@ progress tracker. Source: full-repo review at commit `3bb1586`.
 
 | Tier                 | Items  | Done  |
 | -------------------- | ------ | ----- |
-| 1 — Quick wins       | 8      | 6     |
+| 1 — Quick wins       | 8      | 7     |
 | 2 — Small fixes & CI | 5      | 0     |
 | 3 — Features         | 6      | 0     |
 | 4 — Decide first     | 3      | 0     |
-| **Total**            | **22** | **6** |
+| **Total**            | **22** | **7** |
 
 Base gates are green today (`nub run lint`, `nub run format:check`, and
 `./node_modules/.bin/tsc --noEmit` all exit 0), so nothing below has to work
@@ -82,12 +82,15 @@ No decisions required. Each is a single file.
       will drift. Trim the landing page to a one-line usage summary plus a link.
       Done when: the query-param table exists in exactly one place.
 
-- [ ] **1.7 — Send an honest Reddit User-Agent**
-      `src/constants.ts:18-20` sends a spoofed Firefox UA. Reddit's API rules ask for
-      `<platform>:<app id>:<version> (by /u/<user>)`; generic UAs are the usual cause
-      of surprise 403s.
+- [x] **1.7 — Send an honest Reddit User-Agent**
+      `src/constants.ts:18-20` sent a spoofed Firefox UA. Reddit's API rules ask for a
+      unique, descriptive UA. **Decided 2026-09-19:** project-URL form,
+      `reddviz/<version> (+https://noz.one/ujol/reddviz)`, with `<version>` read from
+      `package.json` so it tracks releases (needs `resolveJsonModule` in
+      `tsconfig.json`).
       Done when: `FETCH_HEADERS` carries an app-specific UA and a live request still
-      returns 200.
+      returns 200. Verified locally that both outbound calls carry the new UA; the
+      live reddit check is deploy-time, since this environment is 403'd by reddit.
 
 - [ ] **1.8 — Early-exit `pickRandom`**
       `src/gimme.ts:94-101` shuffles all 100 items to return ≤50. Stop the loop at

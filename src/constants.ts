@@ -1,3 +1,5 @@
+import { version } from "../package.json";
+
 export const SUBREDDITS = [
     "memes",
     "me_irl",
@@ -16,8 +18,8 @@ export const SUB_PREFIX_KEY = "subreddit;";
 export const ACCESS_TOKEN_KEY = "accessToken";
 
 export const FETCH_HEADERS = {
-    "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/116.0",
+    // reddit's API rules ask for a unique, descriptive UA with a contact point
+    "User-Agent": `reddviz/${version} (+https://noz.one/ujol/reddviz)`,
     Accept: "application/json",
     "Accept-Language": "en-US,en;q=0.5",
 };
