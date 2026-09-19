@@ -27,9 +27,9 @@ progress tracker. Source: full-repo review at commit `3bb1586`.
 | -------------------- | ------ | ------ |
 | 1 — Quick wins       | 8      | 8      |
 | 2 — Small fixes & CI | 5      | 5      |
-| 3 — Features         | 6      | 2      |
+| 3 — Features         | 6      | 3      |
 | 4 — Decide first     | 3      | 0      |
-| **Total**            | **22** | **15** |
+| **Total**            | **22** | **16** |
 
 Base gates are green today (`nub run lint`, `nub run format:check`, and
 `./node_modules/.bin/tsc --noEmit` all exit 0), so nothing below has to work
@@ -162,13 +162,24 @@ One defined answer each, but they touch shared paths or CI config.
 
 Multi-file, but the approach is already clear.
 
-- [ ] **3.1 — Negative caching for empty results**
-      `src/gimme.ts:77` deliberately skips caching empty results. Right for
-      poisoning, but a nonexistent or image-less subreddit re-hits reddit on every
-      request. Write a short-lived marker (30-60s, separate key prefix) on empty
-      results.
+- [x] **3.1 — Negative caching for empty results**
+      `src/gimme.ts` deliberately skipped caching empty results. Right for
+      poisoning, but a nonexistent or image-less subreddit re-hit reddit on every
+      request. Added a short-lived marker under its own `miss;` prefix
+      (`MISS_EXPIRE = 60`), so the 4h key stays untouched and a newly created
+      subreddit still shows up within a minute.
+      Two things the item left open, decided while implementing: - A marker replays the failure it recorded instead of only signalling
+      "empty". Without that, a nonexistent subreddit answers "r/x does not exist"
+      on the first request and "no image posts found in r/x" on the next — the
+      same request, two different messages. - Only 4xx failures are remembered. A 4xx is reddit answering
+      deterministically (no such subreddit, private, locked, empty); a 5xx or a
+      rate limit is transient, and remembering it would only postpone recovery.
       Done when: a second request for a known-empty subreddit makes no reddit call,
-      and a bad response still cannot poison the 4h positive cache.
+      and a bad response still cannot poison the 4h positive cache. Verified against
+      the real bundle with one KV shared across requests: image-less 1 → 0 listing
+      calls and marker only; nonexistent 1 → 0 calls with an identical message; a
+      reddit 503 still 1 → 1 calls with no marker; a successful fetch writes the 4h
+      key and no marker.
 
 - [ ] **3.2 — Refresh the cache in the background near expiry**
       Cache hits near TTL still pay a full reddit round trip. Use

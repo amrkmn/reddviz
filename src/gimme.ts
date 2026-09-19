@@ -1,6 +1,13 @@
 import type { Context } from "hono";
 import { Hono } from "hono";
-import { SUBREDDITS, SUB_EXPIRE, SUB_PREFIX_KEY } from "./constants";
+import type { ContentfulStatusCode } from "hono/utils/http-status";
+import {
+    SUBREDDITS,
+    SUB_EXPIRE,
+    SUB_PREFIX_KEY,
+    MISS_EXPIRE,
+    MISS_PREFIX_KEY,
+} from "./constants";
 import { HTTPError } from "./error";
 import { getPosts } from "./reddit";
 import type { Post } from "./types";
@@ -12,6 +19,14 @@ const SUBREDDIT_NAME = /^[a-z0-9_]{2,21}$/;
 const NSFW_VALUES = "true, false or only";
 
 type NsfwFilter = "include" | "exclude" | "only";
+
+// what a short-lived miss marker holds: nothing for "fetched, but no usable
+// posts", or the deterministic reddit failure that caused the miss, so a replay
+// answers with the same status and message as the original request
+interface CacheMiss {
+    status?: ContentfulStatusCode;
+    message?: string;
+}
 
 const gimme = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -120,14 +135,50 @@ async function getCachedPosts(
     // ponytail: Array.isArray guards against stale/garbage cache entries (a non-array parses to a string; indexing it yields single letters)
     if (Array.isArray(cached) && cached.length > 0) return cached;
 
-    const images = (await getPosts(c, subreddit)).filter(hasImage);
-
-    // ponytail: skips caching empty results so a bad reddit response can't poison the cache for 4h
-    if (images.length > 0) {
-        await kv.put(`${SUB_PREFIX_KEY}${subreddit}`, JSON.stringify(images), {
-            expirationTtl: SUB_EXPIRE,
-        });
+    const missKey = `${MISS_PREFIX_KEY}${subreddit}`;
+    const miss = await kv.get<CacheMiss>(missKey, { type: "json" });
+    if (miss) {
+        // a marker either replays a deterministic failure or just means "nothing
+        // usable"; anything else must fall through to the fetch rather than become
+        // a bogus status code
+        const { status, message } = miss;
+        if (
+            status !== undefined &&
+            Number.isFinite(status) &&
+            message !== undefined
+        )
+            throw new HTTPError(status, message);
+        return [];
     }
+
+    let images: Post[];
+    try {
+        images = (await getPosts(c, subreddit)).filter(hasImage);
+    } catch (err) {
+        // a 4xx is reddit answering deterministically (no such subreddit, private,
+        // locked) so it is worth remembering for a minute. A 5xx or a rate limit
+        // is transient: caching it would only postpone recovery.
+        if (err instanceof HTTPError && err.code < 500)
+            await kv.put(
+                missKey,
+                JSON.stringify({ status: err.code, message: err.message }),
+                { expirationTtl: MISS_EXPIRE },
+            );
+        throw err;
+    }
+
+    if (images.length === 0) {
+        // only the short-lived marker is written here, so a bad reddit response
+        // still can't occupy the 4h key
+        await kv.put(missKey, JSON.stringify({}), {
+            expirationTtl: MISS_EXPIRE,
+        });
+        return images;
+    }
+
+    await kv.put(`${SUB_PREFIX_KEY}${subreddit}`, JSON.stringify(images), {
+        expirationTtl: SUB_EXPIRE,
+    });
     return images;
 }
 

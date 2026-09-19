@@ -135,6 +135,14 @@ Errors return `"success": false` with a message:
 | 500    | Unexpected error from Reddit                                                                   |
 | 503    | Reddit is unreachable, rate limiting us, or rejected our credentials                           |
 
+### Caching
+
+Posts are cached per subreddit for 4 hours (`SUB_EXPIRE`), so most requests cost
+no Reddit call. A subreddit that comes back with nothing usable — missing,
+private, or with no image posts — is remembered for 60 seconds only
+(`MISS_EXPIRE`), so a fixed typo or a newly created subreddit is picked up
+quickly.
+
 ## Available scripts
 
 - `nub run dev`: Start the development server.
