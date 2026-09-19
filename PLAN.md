@@ -26,10 +26,10 @@ progress tracker. Source: full-repo review at commit `3bb1586`.
 | Tier                 | Items  | Done   |
 | -------------------- | ------ | ------ |
 | 1 — Quick wins       | 8      | 8      |
-| 2 — Small fixes & CI | 5      | 4      |
+| 2 — Small fixes & CI | 5      | 5      |
 | 3 — Features         | 6      | 0      |
 | 4 — Decide first     | 3      | 0      |
-| **Total**            | **22** | **12** |
+| **Total**            | **22** | **13** |
 
 Base gates are green today (`nub run lint`, `nub run format:check`, and
 `./node_modules/.bin/tsc --noEmit` all exit 0), so nothing below has to work
@@ -89,8 +89,10 @@ No decisions required. Each is a single file.
       `package.json` so it tracks releases (needs `resolveJsonModule` in
       `tsconfig.json`).
       Done when: `FETCH_HEADERS` carries an app-specific UA and a live request still
-      returns 200. Verified locally that both outbound calls carry the new UA; the
-      live reddit check is deploy-time, since this environment is 403'd by reddit.
+      returns 200. Verified locally that both outbound calls carry the new UA, and
+      confirmed live through `wrangler dev --remote`: reddit accepted the UA and
+      returned a real r/memes post. (Unauthenticated requests from this machine are
+      403'd by reddit; the Worker's own OAuth calls from Cloudflare's edge are not.)
 
 - [x] **1.8 — Early-exit `pickRandom`**
       `src/gimme.ts:94-101` shuffles all 100 items to return ≤50. Stop the loop at
@@ -142,10 +144,17 @@ One defined answer each, but they touch shared paths or CI config.
       validation paths 400, no runtime errors, and the bundle shrank 96.24 → 77.71
       KiB. The production deploy is unverified — needs a real push.
 
-- [ ] **2.5 — Add a staging environment with its own KV**
-      `wrangler.jsonc` has one namespace (prod) and one binding. A second env plus
-      its own KV namespace keeps experiments and test data out of production cache.
+- [x] **2.5 — Add a staging environment with its own KV**
+      `wrangler.jsonc` had one namespace (prod) and one binding. Added `env.staging`
+      pointing at a new `REDDVIZ_KV_STAGING` namespace
+      (`bb4ac9c8d9dc4d31a973ef48a07ae365`, same `REDDVIZ_KV` binding name so app code
+      is unchanged) plus a distinct `reddviz-staging` worker name. Named envs don't
+      inherit top-level secrets, so staging needs its own — documented in the README.
       Done when: `wrangler dev --env staging` reads and writes the staging namespace.
+      Verified end-to-end: `wrangler dev --remote --env staging` returned a real
+      r/memes post and left `accessToken` and `subreddit;memes` in the remote
+      staging namespace (both with TTLs). The deploy workflow still deploys
+      production only — staging is manual.
 
 ---
 

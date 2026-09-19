@@ -23,4 +23,15 @@
             "head_sampling_rate": 1,
         },
     },
+    "env": {
+        "staging": {
+            "name": "reddviz-staging",
+            "kv_namespaces": [
+                {
+                    "binding": "REDDVIZ_KV",
+                    "id": "bb4ac9c8d9dc4d31a973ef48a07ae365",
+                },
+            ],
+        },
+    },
 }
