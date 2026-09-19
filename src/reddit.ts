@@ -24,7 +24,18 @@ async function fetchToken(
         headers: { ...FETCH_HEADERS, authorization: `Basic ${auth}` },
     });
 
-    if (!res.ok) return "";
+    // a token we failed to obtain must not be carried forward as an empty bearer:
+    // reddit answers that with a 401, which then reads as a listing error
+    if (res.status === 429)
+        throw new HTTPError(
+            503,
+            "reddit is rate limiting requests, please try again later",
+        );
+    if (!res.ok)
+        throw new HTTPError(
+            503,
+            `could not authenticate with reddit (status ${res.status}), please try again later`,
+        );
 
     // SAFETY: reddit's client-credentials endpoint returns { access_token, expires_in } on 2xx
     const data = (await res.json()) as {
@@ -39,6 +50,11 @@ async function fetchToken(
 
 function apiError(status: number, subreddit: string): HTTPError {
     switch (status) {
+        case 401:
+            return new HTTPError(
+                503,
+                "reddit rejected our credentials, please try again later",
+            );
         case 403:
             return new HTTPError(
                 400,
@@ -46,6 +62,11 @@ function apiError(status: number, subreddit: string): HTTPError {
             );
         case 404:
             return new HTTPError(404, `r/${subreddit} does not exist`);
+        case 429:
+            return new HTTPError(
+                503,
+                "reddit is rate limiting requests, please try again later",
+            );
         case 500:
             return new HTTPError(
                 503,

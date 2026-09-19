@@ -105,7 +105,7 @@ Errors return `"success": false` with a message:
 | 400    | Invalid `count` value, or subreddit is private/locked                              |
 | 404    | Subreddit doesn't exist, has no image posts, or all posts are NSFW (with `nonsfw`) |
 | 500    | Unexpected error from Reddit                                                       |
-| 503    | Reddit is temporarily unreachable                                                  |
+| 503    | Reddit is unreachable, rate limiting us, or rejected our credentials               |
 
 ## Available scripts
 

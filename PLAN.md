@@ -26,10 +26,10 @@ progress tracker. Source: full-repo review at commit `3bb1586`.
 | Tier                 | Items  | Done  |
 | -------------------- | ------ | ----- |
 | 1 — Quick wins       | 8      | 8     |
-| 2 — Small fixes & CI | 5      | 0     |
+| 2 — Small fixes & CI | 5      | 1     |
 | 3 — Features         | 6      | 0     |
 | 4 — Decide first     | 3      | 0     |
-| **Total**            | **22** | **8** |
+| **Total**            | **22** | **9** |
 
 Base gates are green today (`nub run lint`, `nub run format:check`, and
 `./node_modules/.bin/tsc --noEmit` all exit 0), so nothing below has to work
@@ -104,14 +104,15 @@ No decisions required. Each is a single file.
 
 One defined answer each, but they touch shared paths or CI config.
 
-- [ ] **2.1 — Handle 401, 429, and token-fetch failure**
+- [x] **2.1 — Handle 401, 429, and token-fetch failure**
       `src/reddit.ts:27`, `40-60`. `fetchToken` returns `""` on any non-2xx, the
       request goes out as `Bearer ` empty, returns 401, and lands in `default:` →
       `500 "unexpected error from reddit (status 401)"`. There is no 429 case, so
       rate-limiting also reads as a generic 500. Map both explicitly; consider
       throwing instead of continuing with an empty token.
       Done when: 401, 429 and a failed token fetch each produce a distinct,
-      accurate status and message.
+      accurate status and message. Mapped 401 and 429 to distinct 503 messages;
+      a failed token fetch now throws instead of continuing with an empty bearer.
 
 - [ ] **2.2 — Make invalid counts actually return 400**
       `src/gimme.ts:52-53` vs `README.md:98` and `src/home.ts:75-80`. `?c=abc`
