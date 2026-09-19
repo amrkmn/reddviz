@@ -25,11 +25,11 @@ progress tracker. Source: full-repo review at commit `3bb1586`.
 
 | Tier | Items | Done |
 | ---- | ----- | ---- |
-| 1 — Quick wins | 8 | 3 |
+| 1 — Quick wins | 8 | 4 |
 | 2 — Small fixes & CI | 5 | 0 |
 | 3 — Features | 6 | 0 |
 | 4 — Decide first | 3 | 0 |
-| **Total** | **22** | **3** |
+| **Total** | **22** | **4** |
 
 Base gates are green today (`nub run lint`, `nub run format:check`, and
 `./node_modules/.bin/tsc --noEmit` all exit 0), so nothing below has to work
@@ -63,7 +63,7 @@ No decisions required. Each is a single file.
   Done when: `/gimme/..%2F..%2Fapi%2Fv1%2Fme` returns 400 and `/gimme/memes`
   still works.
 
-- [ ] **1.4 — Guard `hasImage` against a throwing `new URL()`**
+- [x] **1.4 — Guard `hasImage` against a throwing `new URL()`**
   `src/gimme.ts:86-92`. `new URL()` throws on a relative or malformed value
   (verified), and one bad post fails the whole response. Wrap in `try/catch`
   returning `false`. Unconfirmed whether reddit ever emits a relative `url` —

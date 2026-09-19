@@ -94,11 +94,14 @@ async function getCachedPosts(
 }
 
 function hasImage(post: Post): boolean {
-    return (
-        !!post.image &&
-        !post.image.endsWith(".gifv") &&
-        IMAGE_EXT.test(new URL(post.image).pathname)
-    );
+    if (!post.image || post.image.endsWith(".gifv")) return false;
+    try {
+        return IMAGE_EXT.test(new URL(post.image).pathname);
+    } catch {
+        // a relative or malformed url has no host to parse and would otherwise
+        // fail the whole request
+        return false;
+    }
 }
 
 function pickRandom<T>(arr: T[], n: number): T[] {
