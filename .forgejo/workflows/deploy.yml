@@ -43,10 +43,28 @@ jobs:
                   chmod 755 /root/.cache
                   chmod 700 /root/.cache/nub
 
+            # ACTIONS_CACHE_URL is injected by the runner, and it embeds a one-time
+            # token, so the log shows only the host. Skipped connection refused means
+            # the job container cannot reach the runner's cache proxy, which
+            # cache.host / actions_cache_url_override exist to fix. Never fails the job.
+            - name: Check the cache endpoint
+              shell: bash
+              run: |
+                  url="${ACTIONS_CACHE_URL:-}"
+                  if [ -z "$url" ]; then
+                      echo "ACTIONS_CACHE_URL is not set: the runner is not offering a cache"
+                      exit 0
+                  fi
+                  echo "::add-mask::${url}"
+                  echo "cache host: $(printf '%s' "$url" | cut -d/ -f3)"
+                  curl -s -o /dev/null -w 'cache endpoint responded %{http_code}\n' --max-time 10 "$url" || echo "cache endpoint unreachable from this container"
+
             - name: Set up Nub
               uses: https://github.com/nubjs/setup-nub@v0
               with:
-                  cache: false
+                  nub-version: "0.9.2"
+                  cache: true
+                  cache-dependency-path: nub.lock
 
             - name: Install dependencies
               run: nub ci
