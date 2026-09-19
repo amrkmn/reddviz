@@ -7,6 +7,7 @@ import {
     SUB_PREFIX_KEY,
     MISS_EXPIRE,
     MISS_PREFIX_KEY,
+    SUB_REFRESH_WINDOW,
 } from "./constants";
 import { HTTPError } from "./error";
 import { getPosts } from "./reddit";
@@ -26,6 +27,11 @@ type NsfwFilter = "include" | "exclude" | "only";
 interface CacheMiss {
     status?: ContentfulStatusCode;
     message?: string;
+}
+
+// written alongside a cached listing so a hit can tell how old it is
+interface CacheMeta {
+    storedAt: number;
 }
 
 const gimme = new Hono<{ Bindings: CloudflareBindings }>();
@@ -129,11 +135,18 @@ async function getCachedPosts(
     subreddit: string,
 ): Promise<Post[]> {
     const kv = c.get("kv");
-    const cached = await kv.get<Post[]>(`${SUB_PREFIX_KEY}${subreddit}`, {
-        type: "json",
-    });
+    const { value: cached, metadata } = await kv.getWithMetadata<
+        Post[],
+        CacheMeta
+    >(`${SUB_PREFIX_KEY}${subreddit}`, { type: "json" });
     // ponytail: Array.isArray guards against stale/garbage cache entries (a non-array parses to a string; indexing it yields single letters)
-    if (Array.isArray(cached) && cached.length > 0) return cached;
+    if (Array.isArray(cached) && cached.length > 0) {
+        // too close to expiry to be worth a round trip for this caller: hand back
+        // the stale copy and let the refresh land for whoever asks next
+        if (isNearExpiry(metadata?.storedAt))
+            c.executionCtx.waitUntil(refreshPosts(c, subreddit));
+        return cached;
+    }
 
     const missKey = `${MISS_PREFIX_KEY}${subreddit}`;
     const miss = await kv.get<CacheMiss>(missKey, { type: "json" });
@@ -176,10 +189,45 @@ async function getCachedPosts(
         return images;
     }
 
-    await kv.put(`${SUB_PREFIX_KEY}${subreddit}`, JSON.stringify(images), {
-        expirationTtl: SUB_EXPIRE,
-    });
+    await putPosts(c, subreddit, images);
     return images;
+}
+
+// a listing past most of its TTL is due for a refresh; entries written before
+// this metadata existed can't be aged, so they expire as they did before
+function isNearExpiry(storedAt: number | undefined): boolean {
+    if (storedAt === undefined) return false;
+    return Date.now() - storedAt > (SUB_EXPIRE - SUB_REFRESH_WINDOW) * 1000;
+}
+
+async function putPosts(
+    c: Context<{ Bindings: CloudflareBindings }>,
+    subreddit: string,
+    images: Post[],
+): Promise<void> {
+    await c
+        .get("kv")
+        .put(`${SUB_PREFIX_KEY}${subreddit}`, JSON.stringify(images), {
+            expirationTtl: SUB_EXPIRE,
+            metadata: { storedAt: Date.now() },
+        });
+}
+
+// refreshes without making anyone wait; the stale copy is still servable, so a
+// failure is logged rather than raised
+async function refreshPosts(
+    c: Context<{ Bindings: CloudflareBindings }>,
+    subreddit: string,
+): Promise<void> {
+    try {
+        const images = (await getPosts(c, subreddit)).filter(hasImage);
+        // an empty refresh leaves the stale entry to expire on its own instead of
+        // dropping a subreddit that still has servable posts
+        if (images.length === 0) return;
+        await putPosts(c, subreddit, images);
+    } catch (err) {
+        console.error(err);
+    }
 }
 
 function hasImage(post: Post): boolean {

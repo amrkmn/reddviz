@@ -27,9 +27,9 @@ progress tracker. Source: full-repo review at commit `3bb1586`.
 | -------------------- | ------ | ------ |
 | 1 — Quick wins       | 8      | 8      |
 | 2 — Small fixes & CI | 5      | 5      |
-| 3 — Features         | 6      | 3      |
+| 3 — Features         | 6      | 4      |
 | 4 — Decide first     | 3      | 0      |
-| **Total**            | **22** | **16** |
+| **Total**            | **22** | **17** |
 
 Base gates are green today (`nub run lint`, `nub run format:check`, and
 `./node_modules/.bin/tsc --noEmit` all exit 0), so nothing below has to work
@@ -181,12 +181,26 @@ Multi-file, but the approach is already clear.
       reddit 503 still 1 → 1 calls with no marker; a successful fetch writes the 4h
       key and no marker.
 
-- [ ] **3.2 — Refresh the cache in the background near expiry**
-      Cache hits near TTL still pay a full reddit round trip. Use
-      `c.executionCtx.waitUntil()` to refresh when the entry is close to expiring,
-      and serve the stale value.
+- [x] **3.2 — Refresh the cache in the background near expiry**
+      A cache hit near the TTL still paid a full reddit round trip. Cached listings
+      now carry `{ storedAt }` metadata, and an entry in its last 15 minutes
+      (`SUB_REFRESH_WINDOW`) is served immediately while `c.executionCtx.waitUntil()`
+      refreshes it behind the response. A refresh that fails or comes back empty is
+      logged and otherwise ignored, leaving the stale entry to expire normally rather
+      than dropping a subreddit that still has servable posts. Entries written before
+      the metadata existed can't be aged, so they expire exactly as they did before.
       Done when: a request against a near-expiry entry returns immediately and a
-      fresh value is present afterwards.
+      fresh value is present afterwards. Verified in workerd with a real KV: a
+      seeded entry 60s from expiry was served in **13ms** while the refresh was
+      still in flight, and the key afterwards held live reddit posts with fresh
+      metadata. Repeating the stale half through `wrangler dev --remote` served the
+      seeded entry in 0.23s, but the background refresh did not land there — the
+      likely cause is the remote dev-session's KV proxy not carrying metadata
+      (unproven), since the same seeded metadata drove the refresh correctly in
+      workerd. **Known limitation, not implemented:** simultaneous requests near
+      expiry each start their own refresh, so a burst can mean several reddit calls;
+      single-flight would need extra state (a short-lived in-progress marker or a
+      Durable Object).
 
 - [x] **3.3 — Add a `/health` endpoint**
       Separates "worker down" from "reddit down" for uptime checks. Kept

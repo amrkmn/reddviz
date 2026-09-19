@@ -138,7 +138,9 @@ Errors return `"success": false` with a message:
 ### Caching
 
 Posts are cached per subreddit for 4 hours (`SUB_EXPIRE`), so most requests cost
-no Reddit call. A subreddit that comes back with nothing usable — missing,
+no Reddit call. An entry in its final 15 minutes (`SUB_REFRESH_WINDOW`) is served
+from cache while it is refreshed in the background, so a cache hit near the TTL
+never waits on Reddit. A subreddit that comes back with nothing usable — missing,
 private, or with no image posts — is remembered for 60 seconds only
 (`MISS_EXPIRE`), so a fixed typo or a newly created subreddit is picked up
 quickly.

@@ -20,6 +20,9 @@ export const SUB_PREFIX_KEY = "subreddit;";
 // subreddit which just got its first posts shows up promptly
 export const MISS_EXPIRE = 60;
 export const MISS_PREFIX_KEY = "miss;";
+// a cached listing this close to its TTL is refreshed in the background instead
+// of making the next caller wait on reddit
+export const SUB_REFRESH_WINDOW = 900;
 export const ACCESS_TOKEN_KEY = "accessToken";
 
 export const FETCH_HEADERS = {
