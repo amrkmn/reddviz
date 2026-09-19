@@ -1,0 +1,7 @@
+# Copy to `.dev.vars` for local development (`nub run dev`).
+# Values come from a Reddit app at https://www.reddit.com/prefs/apps
+# (type: "script"). In production the same keys are Worker secrets:
+# `wrangler secret put REDDIT_CLIENT_ID` / `wrangler secret put REDDIT_CLIENT_SECRET`.
+
+REDDIT_CLIENT_ID=your_client_id
+REDDIT_CLIENT_SECRET=your_client_secret
