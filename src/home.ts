@@ -127,7 +127,7 @@ home.get("/", (c) =>
                             <td>a single post</td>
                         </tr>
                         <tr>
-                            <td><code>t</code></td>
+                            <td><code>t</code>, <code>time</code></td>
                             <td>
                                 <code>day</code>, <code>week</code>,
                                 <code>month</code>, <code>year</code>,
@@ -172,8 +172,8 @@ GET /gimme/memes?c=5&amp;nsfw=false</code></pre>
                         <tr>
                             <td>400</td>
                             <td>
-                                Invalid <code>c</code>, <code>nsfw</code> or
-                                <code>t</code> value
+                                Invalid <code>c</code>, <code>nsfw</code>,
+                                <code>t</code> or <code>time</code> value
                             </td>
                         </tr>
                         <tr>
