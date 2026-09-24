@@ -16,11 +16,13 @@ const kv = createMiddleware<{ Bindings: CloudflareBindings }>(
 );
 
 app.use(trimTrailingSlash());
+
 app.use(kv);
 
 app.onError((err, c) => {
     if (!(err instanceof HTTPError)) {
         console.error(err);
+
         return c.json(
             {
                 success: false,
@@ -29,10 +31,12 @@ app.onError((err, c) => {
             500,
         );
     }
+
     return c.json({ success: false, message: err.message }, err.code);
 });
 
 app.route("/", home);
+
 app.route("/gimme", gimme);
 
 // deliberately makes no reddit call: an uptime check should be able to tell a

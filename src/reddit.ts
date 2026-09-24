@@ -19,6 +19,7 @@ async function fetchToken(
     const auth = btoa(
         `${c.env.REDDIT_CLIENT_ID}:${c.env.REDDIT_CLIENT_SECRET}`,
     );
+
     const res = await fetch("https://www.reddit.com/api/v1/access_token", {
         method: "POST",
         body: new URLSearchParams({ grant_type: "client_credentials" }),
@@ -32,6 +33,7 @@ async function fetchToken(
             503,
             "reddit is rate limiting requests, please try again later",
         );
+
     if (!res.ok)
         throw new HTTPError(
             503,
@@ -43,9 +45,11 @@ async function fetchToken(
         access_token: string;
         expires_in: number;
     };
+
     await c.get("kv").put(ACCESS_TOKEN_KEY, data.access_token, {
         expirationTtl: data.expires_in,
     });
+
     return data.access_token;
 }
 
@@ -90,6 +94,7 @@ export async function getPosts(
 
     let token =
         (await c.get("kv").get(ACCESS_TOKEN_KEY)) ?? (await fetchToken(c));
+
     let res = await fetch(url, {
         headers: { ...FETCH_HEADERS, authorization: `Bearer ${token}` },
     });
@@ -107,7 +112,9 @@ export async function getPosts(
     const listing = (await res
         .json()
         .catch(() => null)) as RedditListing | null;
+
     const children = listing?.data?.children ?? [];
+
     if (children.length === 0)
         throw new HTTPError(
             404,
@@ -120,6 +127,7 @@ export async function getPosts(
 function toPost(post: RedditPostData): Post {
     const img = post.preview?.images?.[0];
     const gif = img?.variants?.gif;
+
     const urls = (list?: { url: string }[]) =>
         (list ?? []).map((x) => decode(x.url));
 

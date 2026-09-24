@@ -16,9 +16,12 @@ import { getPosts } from "./reddit";
 import type { Post } from "./types";
 
 const MAX_COUNT = 50;
+
 const IMAGE_EXT = /\.(jpe?g|png|gif)$/i;
+
 // 2 characters minimum: 1-char names can't exist, but r/de and r/me are real
 const SUBREDDIT_NAME = /^[a-z0-9_]{2,21}$/;
+
 const NSFW_VALUES = "true, false or only";
 
 type NsfwFilter = "include" | "exclude" | "only";
@@ -48,6 +51,7 @@ const gimme = new Hono<{ Bindings: CloudflareBindings }>();
  */
 gimme.get("/:subreddit?", async (c) => {
     const param = c.req.param("subreddit")?.toLowerCase();
+
     // unvalidated, an encoded slash escapes the r/ prefix and picks an arbitrary
     // path on oauth.reddit.com while carrying the app's bearer token
     if (param !== undefined && !SUBREDDIT_NAME.test(param))
@@ -58,17 +62,21 @@ gimme.get("/:subreddit?", async (c) => {
 
     const subreddit =
         param ?? SUBREDDITS[Math.floor(Math.random() * SUBREDDITS.length)];
+
     // no ?t= has always meant "pick a window at random per request"; an explicit
     // window is one of the five, and anything else is a 400 rather than a guess
     const time =
         parseTime(c.req.query("t") ?? c.req.query("time")) ?? randomTime();
+
     const nsfw = parseNsfw(
         c.req.query("nsfw"),
         c.req.query("nonsfw") !== undefined,
     );
+
     const count = parseCount(c.req.query("c") ?? c.req.query("count"));
 
     const posts = await getCachedPosts(c, subreddit, time);
+
     if (posts.length === 0) {
         throw new HTTPError(
             404,
@@ -79,6 +87,7 @@ gimme.get("/:subreddit?", async (c) => {
     }
 
     const visible = filterNsfw(posts, nsfw);
+
     if (visible.length === 0)
         throw new HTTPError(
             404,
@@ -89,6 +98,7 @@ gimme.get("/:subreddit?", async (c) => {
 
     if (count !== null) {
         const picked = pickRandom(visible, Math.min(count, visible.length));
+
         return c.json({ count: picked.length, posts: picked });
     }
 
@@ -99,12 +109,14 @@ gimme.get("/:subreddit?", async (c) => {
 // digits in range, so a typo can't silently fall back to one post
 function parseCount(raw: string | undefined): number | null {
     if (raw === undefined) return null;
+
     // strict digits: rejects 5.5, 0x10, 1e3, negatives and blanks
     if (!/^\d+$/.test(raw) || Number(raw) < 1)
         throw new HTTPError(
             400,
             `invalid count value "${raw}": must be a whole number between 1 and ${MAX_COUNT}`,
         );
+
     return Math.min(Number(raw), MAX_COUNT);
 }
 
@@ -112,6 +124,7 @@ function parseCount(raw: string | undefined): number | null {
 function parseNsfw(raw: string | undefined, nonsfw: boolean): NsfwFilter {
     if (raw === undefined) return nonsfw ? "exclude" : "include";
     const value = raw.toLowerCase();
+
     // a bare ?nsfw lands here too: an empty value names no state, and guessing one
     // is how a caller silently gets the opposite of what they asked for
     if (value !== "true" && value !== "false" && value !== "only")
@@ -119,11 +132,13 @@ function parseNsfw(raw: string | undefined, nonsfw: boolean): NsfwFilter {
             400,
             `invalid nsfw value "${raw}": must be ${NSFW_VALUES}`,
         );
+
     if (nonsfw && value !== "false")
         throw new HTTPError(
             400,
             `nsfw=${raw} contradicts nonsfw: nonsfw hides NSFW posts, use one or the other`,
         );
+
     return value === "false"
         ? "exclude"
         : value === "true"
@@ -133,6 +148,7 @@ function parseNsfw(raw: string | undefined, nonsfw: boolean): NsfwFilter {
 
 function filterNsfw(posts: Post[], filter: NsfwFilter): Post[] {
     if (filter === "include") return posts;
+
     return posts.filter((p) => (filter === "only" ? p.nsfw : !p.nsfw));
 }
 
@@ -142,6 +158,7 @@ function filterNsfw(posts: Post[], filter: NsfwFilter): Post[] {
 function parseTime(raw: string | undefined): TimeWindow | undefined {
     if (raw === undefined) return undefined;
     const value = raw.toLowerCase();
+
     switch (value) {
         case "day":
         case "week":
@@ -163,6 +180,7 @@ const randomTime = () => TIMES[Math.floor(Math.random() * TIMES.length)];
 // for a different one, and one window's posts must not be served for another
 const subredditKey = (subreddit: string, time: TimeWindow) =>
     `${SUB_PREFIX_KEY}${subreddit};${time}`;
+
 const missKey = (subreddit: string, time: TimeWindow) =>
     `${MISS_PREFIX_KEY}${subreddit};${time}`;
 
@@ -173,36 +191,43 @@ async function getCachedPosts(
     time: TimeWindow,
 ): Promise<Post[]> {
     const kv = c.get("kv");
+
     const { value: cached, metadata } = await kv.getWithMetadata<
         Post[],
         CacheMeta
     >(subredditKey(subreddit, time), { type: "json" });
+
     // ponytail: Array.isArray guards against stale/garbage cache entries (a non-array parses to a string; indexing it yields single letters)
     if (Array.isArray(cached) && cached.length > 0) {
         // too close to expiry to be worth a round trip for this caller: hand back
         // the stale copy and let the refresh land for whoever asks next
         if (isNearExpiry(metadata?.storedAt))
             c.executionCtx.waitUntil(refreshPosts(c, subreddit, time));
+
         return cached;
     }
 
     const marker = missKey(subreddit, time);
     const miss = await kv.get<CacheMiss>(marker, { type: "json" });
+
     if (miss) {
         // a marker either replays a deterministic failure or just means "nothing
         // usable"; anything else must fall through to the fetch rather than become
         // a bogus status code
         const { status, message } = miss;
+
         if (
             status !== undefined &&
             Number.isFinite(status) &&
             message !== undefined
         )
             throw new HTTPError(status, message);
+
         return [];
     }
 
     let images: Post[];
+
     try {
         images = (await getPosts(c, subreddit, time)).filter(hasImage);
     } catch (err) {
@@ -224,10 +249,12 @@ async function getCachedPosts(
         await kv.put(marker, JSON.stringify({}), {
             expirationTtl: MISS_EXPIRE,
         });
+
         return images;
     }
 
     await putPosts(c, subreddit, time, images);
+
     return images;
 }
 
@@ -235,6 +262,7 @@ async function getCachedPosts(
 // this metadata existed can't be aged, so they expire as they did before
 function isNearExpiry(storedAt: number | undefined): boolean {
     if (storedAt === undefined) return false;
+
     return Date.now() - storedAt > (SUB_EXPIRE - SUB_REFRESH_WINDOW) * 1000;
 }
 
@@ -261,6 +289,7 @@ async function refreshPosts(
 ): Promise<void> {
     try {
         const images = (await getPosts(c, subreddit, time)).filter(hasImage);
+
         // an empty refresh leaves the stale entry to expire on its own instead of
         // dropping a subreddit that still has servable posts
         if (images.length === 0) return;
@@ -272,6 +301,7 @@ async function refreshPosts(
 
 function hasImage(post: Post): boolean {
     if (!post.image || post.image.endsWith(".gifv")) return false;
+
     try {
         return IMAGE_EXT.test(new URL(post.image).pathname);
     } catch {
@@ -285,10 +315,12 @@ function hasImage(post: Post): boolean {
 function pickRandom<T>(arr: T[], n: number): T[] {
     const pool = arr.slice();
     const size = Math.min(n, pool.length);
+
     for (let i = 0; i < size; i++) {
         const j = i + Math.floor(Math.random() * (pool.length - i));
         [pool[i], pool[j]] = [pool[j], pool[i]];
     }
+
     return pool.slice(0, size);
 }
 
