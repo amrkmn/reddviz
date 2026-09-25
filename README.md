@@ -2,6 +2,9 @@
 
 A serverless application deployed on Cloudflare Workers to fetch and display posts from Reddit.
 
+Source: [noz.one/ujol/reddviz](https://noz.one/ujol/reddviz) ·
+Mirror: [github.com/amrkmn/reddviz](https://github.com/amrkmn/reddviz)
+
 > **Disclaimer:** This project was inspired by [D3vd/Meme_Api](https://github.com/D3vd/Meme_Api) but is written from scratch for Cloudflare Workers.
 
 ## Tech stack
@@ -48,7 +51,7 @@ Base URL: your deployed Workers URL (or `http://localhost:8787` in dev).
 Returns `200` with the deployed version. It makes no Reddit call, so an uptime check can still pass while Reddit is down.
 
 ```json
-{ "status": "ok", "version": "1.0.0" }
+{ "status": "ok", "version": "1.0.1" }
 ```
 
 ### `GET /gimme/:subreddit?`
@@ -57,12 +60,12 @@ Returns a random post with an image from a subreddit. If `subreddit` is omitted,
 
 Query parameters:
 
-| Param         | Description                                                                                          |
-| ------------- | ---------------------------------------------------------------------------------------------------- |
-| `c` / `count` | Number of posts to return (1-50). Returns an array instead of a single post.                         |
-| `t` / `time`  | Which top window to draw from: `day`, `week`, `month`, `year` or `all`. Defaults to a random window. |
-| `nsfw`        | `true` (default, include), `false` (exclude) or `only` (NSFW posts only).                            |
-| `nonsfw`      | Shorthand for `nsfw=false`.                                                                          |
+| Param         | Description                                                                                |
+| ------------- | ------------------------------------------------------------------------------------------ |
+| `c` / `count` | Number of posts to return (1-50). Returns an array instead of a single post.               |
+| `t` / `time`  | Which top window to draw from: `day`, `week`, `month`, `year` or `all`. Defaults to `day`. |
+| `nsfw`        | `true` (default, include), `false` (exclude) or `only` (NSFW posts only).                  |
+| `nonsfw`      | Shorthand for `nsfw=false`.                                                                |
 
 A request for a single post:
 
@@ -130,12 +133,15 @@ Posts are cached per subreddit and time window under keys like
 `subreddit;memes;day`, for 4 hours (`SUB_EXPIRE`). Most requests then cost no
 Reddit call, and a request for one window never gets another window's posts.
 
-An entry in its last 15 minutes (`SUB_REFRESH_WINDOW`) is served from the cache
+An entry in its last 2 minutes (`SUB_REFRESH_WINDOW`) is served from the cache
 while it is refreshed in the background, so the request does not wait for Reddit.
+At most one refresh runs per key per minute (`REFRESH_COOLDOWN`), so a burst
+near expiry costs one Reddit call.
 
-A subreddit and window with nothing usable (missing, private, or no image posts)
-are remembered for 60 seconds only (`MISS_EXPIRE`) under `miss;memes;day`. A fixed
-typo or a newly created subreddit shows up within a minute.
+A subreddit and window with nothing usable is remembered in the same key:
+deterministic failures (missing, private, locked) for 5 minutes
+(`NOTFOUND_EXPIRE`), empty listings for 60 seconds (`EMPTY_EXPIRE`). A fixed
+typo shows up within minutes, a newly created subreddit within a minute.
 
 ## Available scripts
 

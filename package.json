@@ -1,6 +1,6 @@
 {
     "name": "reddviz",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Serverless Reddit posts viewer deployed on Cloudflare Workers",
     "keywords": [],
     "license": "MIT",

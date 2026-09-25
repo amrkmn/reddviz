@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { html } from "hono/html";
+import { version } from "../package.json";
 
 const home = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -133,7 +134,7 @@ home.get("/", (c) =>
                                 <code>month</code>, <code>year</code>,
                                 <code>all</code>
                             </td>
-                            <td>a random window</td>
+                            <td><code>day</code></td>
                         </tr>
                         <tr>
                             <td><code>nsfw</code></td>
@@ -194,15 +195,22 @@ GET /gimme/memes?c=5&amp;nsfw=false</code></pre>
                     </table>
 
                     <h2>GET /health</h2>
-                    <pre><code>{ "status": "ok", "version": "1.0.0" }</code></pre>
+                    <pre><code>{ "status": "ok", "version": "${version}" }</code></pre>
 
                     <p class="muted">
-                        Full details:
+                        Source:
                         <a
                             href="https://noz.one/ujol/reddviz"
                             target="_blank"
                             rel="noopener"
                             >noz.one/ujol/reddviz</a
+                        >
+                        ·
+                        <a
+                            href="https://github.com/amrkmn/reddviz"
+                            target="_blank"
+                            rel="noopener"
+                            >github.com/amrkmn/reddviz</a
                         >
                     </p>
                 </body>
