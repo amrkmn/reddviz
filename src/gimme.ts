@@ -6,9 +6,10 @@ import {
     TIMES,
     SUB_EXPIRE,
     SUB_PREFIX_KEY,
-    MISS_EXPIRE,
-    MISS_PREFIX_KEY,
+    EMPTY_EXPIRE,
+    NOTFOUND_EXPIRE,
     SUB_REFRESH_WINDOW,
+    REFRESH_COOLDOWN,
 } from "./constants";
 import type { TimeWindow } from "./constants";
 import { HTTPError } from "./error";
@@ -63,10 +64,9 @@ gimme.get("/:subreddit?", async (c) => {
     const subreddit =
         param ?? SUBREDDITS[Math.floor(Math.random() * SUBREDDITS.length)];
 
-    // no ?t= has always meant "pick a window at random per request"; an explicit
-    // window is one of the five, and anything else is a 400 rather than a guess
-    const time =
-        parseTime(c.req.query("t") ?? c.req.query("time")) ?? randomTime();
+    // no ?t= means the day window: pinning the default to one key keeps the hit
+    // rate high instead of spreading default traffic across all five windows
+    const time = parseTime(c.req.query("t") ?? c.req.query("time")) ?? "day";
 
     const nsfw = parseNsfw(
         c.req.query("nsfw"),
@@ -152,9 +152,8 @@ function filterNsfw(posts: Post[], filter: NsfwFilter): Post[] {
     return posts.filter((p) => (filter === "only" ? p.nsfw : !p.nsfw));
 }
 
-// absent means the caller has no preference, so the window is drawn at random as
-// it always was; an unknown or empty one is rejected rather than silently swapped
-// for a different pool than the caller asked for
+// absent means the day window; an unknown or empty one is rejected rather than
+// silently swapped for a different pool than the caller asked for
 function parseTime(raw: string | undefined): TimeWindow | undefined {
     if (raw === undefined) return undefined;
     const value = raw.toLowerCase();
@@ -174,15 +173,20 @@ function parseTime(raw: string | undefined): TimeWindow | undefined {
     }
 }
 
-const randomTime = () => TIMES[Math.floor(Math.random() * TIMES.length)];
-
-// the window is part of both keys: a 404 for an empty window must not be replayed
+// the window is part of the key: a 404 for an empty window must not be replayed
 // for a different one, and one window's posts must not be served for another
 const subredditKey = (subreddit: string, time: TimeWindow) =>
     `${SUB_PREFIX_KEY}${subreddit};${time}`;
 
-const missKey = (subreddit: string, time: TimeWindow) =>
-    `${MISS_PREFIX_KEY}${subreddit};${time}`;
+// last background refresh per key, so a burst near expiry costs one reddit
+// call rather than one per request. Memory-only: a cold isolate just refreshes
+// again, which is still correct.
+const lastRefresh = new Map<string, number>();
+
+// a single key holds either a listing or a short-lived miss marker, so every
+// path costs at most one KV read. Legacy miss; keys are never read and expire
+// on their own.
+type CachedValue = Post[] | CacheMiss;
 
 // returns cached image posts for a subreddit, fetching and caching them on a miss
 async function getCachedPosts(
@@ -191,30 +195,27 @@ async function getCachedPosts(
     time: TimeWindow,
 ): Promise<Post[]> {
     const kv = c.get("kv");
+    const key = subredditKey(subreddit, time);
 
     const { value: cached, metadata } = await kv.getWithMetadata<
-        Post[],
+        CachedValue,
         CacheMeta
-    >(subredditKey(subreddit, time), { type: "json" });
+    >(key, { type: "json" });
 
     // ponytail: Array.isArray guards against stale/garbage cache entries (a non-array parses to a string; indexing it yields single letters)
     if (Array.isArray(cached) && cached.length > 0) {
         // too close to expiry to be worth a round trip for this caller: hand back
         // the stale copy and let the refresh land for whoever asks next
-        if (isNearExpiry(metadata?.storedAt))
-            c.executionCtx.waitUntil(refreshPosts(c, subreddit, time));
+        if (isNearExpiry(metadata?.storedAt)) maybeRefresh(c, subreddit, time);
 
         return cached;
     }
 
-    const marker = missKey(subreddit, time);
-    const miss = await kv.get<CacheMiss>(marker, { type: "json" });
-
-    if (miss) {
+    if (cached !== null && cached instanceof Object && !Array.isArray(cached)) {
         // a marker either replays a deterministic failure or just means "nothing
         // usable"; anything else must fall through to the fetch rather than become
         // a bogus status code
-        const { status, message } = miss;
+        const { status, message } = cached;
 
         if (
             status !== undefined &&
@@ -232,22 +233,22 @@ async function getCachedPosts(
         images = (await getPosts(c, subreddit, time)).filter(hasImage);
     } catch (err) {
         // a 4xx is reddit answering deterministically (no such subreddit, private,
-        // locked) so it is worth remembering for a minute. A 5xx or a rate limit
+        // locked) so it is worth remembering briefly. A 5xx or a rate limit
         // is transient: caching it would only postpone recovery.
         if (err instanceof HTTPError && err.code < 500)
             await kv.put(
-                marker,
+                key,
                 JSON.stringify({ status: err.code, message: err.message }),
-                { expirationTtl: MISS_EXPIRE },
+                { expirationTtl: NOTFOUND_EXPIRE },
             );
         throw err;
     }
 
     if (images.length === 0) {
-        // only the short-lived marker is written here, so a bad reddit response
-        // still can't occupy the 4h key
-        await kv.put(marker, JSON.stringify({}), {
-            expirationTtl: MISS_EXPIRE,
+        // only a short-lived marker is written here, so a bad reddit response
+        // still can't occupy the key for 4h
+        await kv.put(key, JSON.stringify({}), {
+            expirationTtl: EMPTY_EXPIRE,
         });
 
         return images;
@@ -264,6 +265,21 @@ function isNearExpiry(storedAt: number | undefined): boolean {
     if (storedAt === undefined) return false;
 
     return Date.now() - storedAt > (SUB_EXPIRE - SUB_REFRESH_WINDOW) * 1000;
+}
+
+// at most one background refresh per key per cooldown: the first near-expiry
+// hit refreshes while the rest of the burst is served from cache
+function maybeRefresh(
+    c: Context<{ Bindings: CloudflareBindings }>,
+    subreddit: string,
+    time: TimeWindow,
+): void {
+    const key = subredditKey(subreddit, time);
+    const now = Date.now();
+
+    if (now - (lastRefresh.get(key) ?? 0) < REFRESH_COOLDOWN * 1000) return;
+    lastRefresh.set(key, now);
+    c.executionCtx.waitUntil(refreshPosts(c, subreddit, time));
 }
 
 async function putPosts(

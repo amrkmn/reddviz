@@ -22,16 +22,22 @@ export const SUB_EXPIRE = 14400;
 
 export const SUB_PREFIX_KEY = "subreddit;";
 
-// an empty result is remembered only briefly: long enough to stop a typo or a
-// probe from costing a reddit call on every request, short enough that a
-// subreddit which just got its first posts shows up promptly
-export const MISS_EXPIRE = 60;
+// a miss is remembered only briefly: long enough to stop a typo or a probe
+// from costing a reddit call on every request, short enough that a subreddit
+// which just got its first posts shows up promptly. Deterministic failures
+// (no such subreddit, private, locked) stay longer than an empty listing.
+export const EMPTY_EXPIRE = 60;
 
-export const MISS_PREFIX_KEY = "miss;";
+export const NOTFOUND_EXPIRE = 300;
 
 // a cached listing this close to its TTL is refreshed in the background instead
-// of making the next caller wait on reddit
-export const SUB_REFRESH_WINDOW = 900;
+// of making the next caller wait on reddit. Kept small so only a few requests
+// per TTL window can trigger a refresh.
+export const SUB_REFRESH_WINDOW = 120;
+
+// minimum gap between background refreshes of the same key, so a burst near
+// expiry costs one reddit call rather than one per request
+export const REFRESH_COOLDOWN = 60;
 
 export const ACCESS_TOKEN_KEY = "accessToken";
 

@@ -13,6 +13,16 @@ const decode = (s: string) =>
         .replace(/&quot;/g, '"')
         .replace(/&#39;/g, "'");
 
+// memory-first token: KV is only read when the isolate has no usable token,
+// so a burst of cold misses on one isolate costs one KV read, not one per fetch
+let memToken: string | null = null;
+
+let memExp = 0;
+
+// KV copy is the source of truth across isolates; the memory copy just absorbs
+// bursts on one isolate, so a KV hit is only trusted briefly
+const MEM_TOKEN_TTL = 300_000;
+
 async function fetchToken(
     c: Context<{ Bindings: CloudflareBindings }>,
 ): Promise<string> {
@@ -46,11 +56,35 @@ async function fetchToken(
         expires_in: number;
     };
 
+    // a 60s leeway keeps an almost-expired token from being stored, used once,
+    // and then bounced with a 401 that costs a second token fetch and retry
+    const ttl = Math.max(data.expires_in - 60, 60);
+
     await c.get("kv").put(ACCESS_TOKEN_KEY, data.access_token, {
-        expirationTtl: data.expires_in,
+        expirationTtl: ttl,
     });
 
+    memToken = data.access_token;
+    memExp = Date.now() + ttl * 1000;
+
     return data.access_token;
+}
+
+async function getToken(
+    c: Context<{ Bindings: CloudflareBindings }>,
+): Promise<string> {
+    if (memToken !== null && Date.now() < memExp) return memToken;
+
+    const stored = await c.get("kv").get(ACCESS_TOKEN_KEY);
+
+    if (stored !== null) {
+        memToken = stored;
+        memExp = Date.now() + MEM_TOKEN_TTL;
+
+        return stored;
+    }
+
+    return fetchToken(c);
 }
 
 function apiError(status: number, subreddit: string): HTTPError {
@@ -92,8 +126,7 @@ export async function getPosts(
 ): Promise<Post[]> {
     const url = `https://oauth.reddit.com/r/${subreddit}/top?limit=100&t=${time}`;
 
-    let token =
-        (await c.get("kv").get(ACCESS_TOKEN_KEY)) ?? (await fetchToken(c));
+    let token = await getToken(c);
 
     let res = await fetch(url, {
         headers: { ...FETCH_HEADERS, authorization: `Bearer ${token}` },
