@@ -1,0 +1,50 @@
+name: Cut Release
+
+on:
+    push:
+        tags:
+            - "v*"
+
+jobs:
+    release:
+        name: Publish Forgejo release
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        permissions:
+            contents: write
+        steps:
+            - name: Check out repository
+              uses: https://github.com/actions/checkout@v7
+              with:
+                  fetch-depth: 0
+
+            - name: Set up git-cliff
+              uses: https://github.com/kenji-miyake/setup-git-cliff@v1
+
+            - name: Generate release notes
+              shell: bash
+              run: git cliff --latest --strip header > release-notes.md
+
+            - name: Publish release
+              shell: bash
+              # If this 403s, create an account token with write access to the
+              # repository and store it as the RELEASE_TOKEN action secret.
+              env:
+                  RELEASE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  set -euo pipefail
+                  TAG="$(git describe --tags --exact-match HEAD)"
+                  REMOTE="$(git remote get-url origin)"
+                  REMOTE="${REMOTE%.git}"
+                  REMOTE="${REMOTE#https://}"
+                  REMOTE="${REMOTE#http://}"
+                  HOST="${REMOTE%%/*}"
+                  REPO_PATH="${REMOTE#*/}"
+                  jq -n \
+                      --arg tag "$TAG" \
+                      --arg body "$(cat release-notes.md)" \
+                      '{tag_name: $tag, name: $tag, body: $body, draft: false, prerelease: false}' \
+                      > /tmp/release.json
+                  curl -sSf -H "Authorization: token ${RELEASE_TOKEN}" -H 'Content-Type: application/json' \
+                      --data @/tmp/release.json \
+                      "https://${HOST}/api/v1/repos/${REPO_PATH}/releases"
