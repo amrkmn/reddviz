@@ -17,15 +17,15 @@
         "cf-typegen": "wrangler types --env-interface CloudflareBindings"
     },
     "dependencies": {
-        "hono": "^4.13.8"
+        "hono": "^4.13.13"
     },
     "devDependencies": {
-        "@oxlint/plugins": "^1.83.0",
-        "@types/node": "^26.6.1",
-        "oxfmt": "^0.68.0",
-        "oxlint": "^1.83.0",
+        "@oxlint/plugins": "^1.86.0",
+        "@types/node": "^26.6.4",
+        "oxfmt": "^0.71.0",
+        "oxlint": "^1.86.0",
         "typescript": "^7.0.2",
-        "wrangler": "^4.134.0"
+        "wrangler": "^4.147.0"
     },
     "devEngines": {
         "packageManager": {
