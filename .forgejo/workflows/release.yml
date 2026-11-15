@@ -19,7 +19,11 @@ jobs:
                   fetch-depth: 0
 
             - name: Set up git-cliff
-              uses: https://github.com/kenji-miyake/setup-git-cliff@v1
+              shell: bash
+              run: |
+                  mkdir -p /tmp/git-cliff
+                  curl -fsSL https://github.com/orhun/git-cliff/releases/download/v2.14.2/git-cliff-2.14.2-x86_64-unknown-linux-gnu.tar.gz | tar -xz -C /tmp/git-cliff --strip-components=1
+                  echo "/tmp/git-cliff" >> "$GITHUB_PATH"
 
             - name: Generate release notes
               shell: bash
