@@ -10,8 +10,6 @@ jobs:
         name: Publish Forgejo release
         runs-on: ubuntu-latest
         timeout-minutes: 10
-        permissions:
-            contents: write
         steps:
             - name: Check out repository
               uses: https://github.com/actions/checkout@v7
@@ -26,8 +24,14 @@ jobs:
                   echo "/tmp/git-cliff" >> "$GITHUB_PATH"
 
             - name: Generate release notes
+              id: notes
               shell: bash
-              run: git cliff --latest --strip header > release-notes.md
+              run: |
+                  {
+                    echo 'content<<EOF'
+                    git cliff --latest --strip header
+                    echo 'EOF'
+                  } >> "$GITHUB_OUTPUT"
 
             - name: Publish release
               uses: https://code.forgejo.org/actions/forgejo-release@v2.9.1
@@ -38,5 +42,6 @@ jobs:
                   tag: ${{ github.ref_name }}
                   sha: ${{ github.sha }}
                   token: ${{ secrets.GITHUB_TOKEN }}
-                  release-notes-file: release-notes.md
+                  release-notes: ${{ steps.notes.outputs.content }}
+                  override: "true"
                   skip-assets: "true"
