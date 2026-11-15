@@ -51,7 +51,7 @@ Base URL: your deployed Workers URL (or `http://localhost:8787` in dev).
 Returns `200` with the deployed version. It makes no Reddit call, so an uptime check can still pass while Reddit is down.
 
 ```json
-{ "status": "ok", "version": "1.0.1" }
+{ "status": "ok", "version": "1.0.2" }
 ```
 
 ### `GET /gimme/:subreddit?`
